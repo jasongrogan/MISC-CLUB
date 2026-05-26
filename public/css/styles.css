@@ -64,8 +64,9 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .hero { position: relative; min-height: 100vh; display: flex; align-items: center; padding: 80px var(--pad-x) 120px; overflow: hidden; isolation: isolate; }
 
 /* ── Crossfading Ken-Burns slideshow ─────────────────────────────────────
-   7 frames × 7s visible each = 49s full cycle (last frame is the aerial
-   drone shot — a "where we are" reveal that closes the rotation).
+   4 frames × 7s visible each = 28s full cycle.
+   Frame order: Sergei RF · WA1500 · Kodak B&W · Drone aerial.
+   (2 additional frames will be inserted when new images are added.)
    Each frame slowly zooms (Ken Burns) while visible, then crossfades to the
    next. Reduced-motion users see only frame 1 with no animation.
    ──────────────────────────────────────────────────────────────────────── */
@@ -80,43 +81,40 @@ button, input, textarea, select { font: inherit; color: inherit; }
   opacity: 0;
   transform: scale(1.05);
   will-change: opacity, transform;
-  animation: heroCrossfade 49s infinite cubic-bezier(.4,0,.2,1), heroKenBurns 49s infinite linear;
+  animation: heroCrossfade 28s infinite cubic-bezier(.4,0,.2,1), heroKenBurns 28s infinite linear;
 }
 /* Frame 1 needs its OWN crossfade so it's visible at page load (no blank intro).
    It fades back in during 96-100% so the cycle loops continuously. */
 .hero-bg-frame:nth-child(1) {
-  animation: heroCrossfadeFirst 49s infinite cubic-bezier(.4,0,.2,1), heroKenBurns 49s infinite linear;
+  animation: heroCrossfadeFirst 28s infinite cubic-bezier(.4,0,.2,1), heroKenBurns 28s infinite linear;
   animation-delay: 0s, 0s;
 }
 .hero-bg-frame:nth-child(2) { animation-delay:  7s,  7s; }
 .hero-bg-frame:nth-child(3) { animation-delay: 14s, 14s; }
 .hero-bg-frame:nth-child(4) { animation-delay: 21s, 21s; }
-.hero-bg-frame:nth-child(5) { animation-delay: 28s, 28s; }
-.hero-bg-frame:nth-child(6) { animation-delay: 35s, 35s; }
-.hero-bg-frame:nth-child(7) { animation-delay: 42s, 42s; }
 
-/* Frames 2-7: invisible at start of cycle, fade in, hold ~5.5s, fade out.
-   7 of 49 seconds visible = ~14.3%; we hold opacity 1 from 2.5% to 13.5%
-   and fade through 1.2s on each side. */
+/* Frames 2–4: invisible at start of cycle, fade in, hold ~5.5s, fade out.
+   7 of 28 seconds visible = 25%; fade in over 1s (~3.5%), hold to 21.5%,
+   fade out by 25%. */
 @keyframes heroCrossfade {
   0%    { opacity: 0; }
-  2.5%  { opacity: 1; }
-  13.5% { opacity: 1; }
-  16%   { opacity: 0; }
+  3.5%  { opacity: 1; }
+  21.5% { opacity: 1; }
+  25%   { opacity: 0; }
   100%  { opacity: 0; }
 }
-/* Frame 1: visible at start, fades out at ~14.5%, fades back in 97-100%. */
+/* Frame 1: visible at start, fades out at ~22%, fades back in 97-100%. */
 @keyframes heroCrossfadeFirst {
   0%    { opacity: 1; }
-  12%   { opacity: 1; }
-  14.5% { opacity: 0; }
+  19%   { opacity: 1; }
+  22%   { opacity: 0; }
   97%   { opacity: 0; }
   100%  { opacity: 1; }
 }
 /* Subtle zoom while frame is on screen — gives the still photos motion */
 @keyframes heroKenBurns {
   0%   { transform: scale(1.05); }
-  16%  { transform: scale(1.18); }
+  25%  { transform: scale(1.18); }
   100% { transform: scale(1.18); }
 }
 
@@ -129,18 +127,15 @@ button, input, textarea, select { font: inherit; color: inherit; }
 /* ── Progress dots (which slide is active) ──────────────────────────── */
 .hero-dots { position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; gap: 8px; }
 .hero-dots span { width: 28px; height: 2px; background: rgba(255,255,255,.18); border-radius: 1px; overflow: hidden; position: relative; }
-.hero-dots span::after { content: ''; position: absolute; inset: 0; background: var(--gold); transform: translateX(-100%); animation: dotFill 49s linear infinite; }
+.hero-dots span::after { content: ''; position: absolute; inset: 0; background: var(--gold); transform: translateX(-100%); animation: dotFill 28s linear infinite; }
 .hero-dots span:nth-child(1)::after { animation-delay:  0s; }
 .hero-dots span:nth-child(2)::after { animation-delay:  7s; }
 .hero-dots span:nth-child(3)::after { animation-delay: 14s; }
 .hero-dots span:nth-child(4)::after { animation-delay: 21s; }
-.hero-dots span:nth-child(5)::after { animation-delay: 28s; }
-.hero-dots span:nth-child(6)::after { animation-delay: 35s; }
-.hero-dots span:nth-child(7)::after { animation-delay: 42s; }
 @keyframes dotFill {
-  0%   { transform: translateX(-100%); }
-  14%  { transform: translateX(0%); }
-  15%, 100% { transform: translateX(100%); }
+  0%    { transform: translateX(-100%); }
+  24%   { transform: translateX(0%); }
+  25.5%, 100% { transform: translateX(100%); }
 }
 @media (max-width: 640px) { .hero-dots { bottom: 96px; } .hero-dots span { width: 18px; } }
 
@@ -239,10 +234,20 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .join-card h4 { font-family: var(--display); font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 4px; }
 .join-card p { color: var(--muted); font-size: 0.88rem; }
 
+/* ── calendar section ───────────────────────────────── */
+.calendar-block { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 48px; }
+@media (max-width: 700px) { .calendar-block { grid-template-columns: 1fr; } }
+.calendar-card { display: flex; flex-direction: column; gap: 12px; padding: 32px 28px; background: var(--char); border: 1px solid var(--line); border-radius: 4px; transition: border-color .3s, transform .3s; text-decoration: none; }
+.calendar-card:hover { border-color: var(--gold); transform: translateY(-4px); }
+.calendar-card-icon { font-size: 2rem; color: var(--gold); }
+.calendar-card h4 { font-family: var(--display); font-size: 1.5rem; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; }
+.calendar-card p { color: var(--muted); font-size: 0.94rem; line-height: 1.55; flex: 1; }
+.calendar-card .arrow { color: var(--gold); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; align-self: flex-start; margin-top: 8px; }
+
 /* ── footer ─────────────────────────────────────────── */
 .site-footer { background: var(--ink); border-top: 1px solid var(--line); padding: 72px 0 0; }
-.footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 48px; padding-bottom: 56px; }
-@media (max-width: 800px) { .footer-grid { grid-template-columns: repeat(2, 1fr); } }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr; gap: 36px; padding-bottom: 56px; }
+@media (max-width: 900px) { .footer-grid { grid-template-columns: repeat(2, 1fr); } }
 .footer-grid h5 { font-family: var(--display); font-size: 0.82rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; font-weight: 700; }
 .footer-grid a { display: block; color: var(--muted); font-size: 0.92rem; padding: 4px 0; transition: color .2s; }
 .footer-grid a:hover { color: var(--gold); }

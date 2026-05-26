@@ -7,7 +7,7 @@
   <title>MISC — Melbourne International Shooting Club · Est. 1955</title>
   <link rel="icon" href="/images/MISC-Colour-6x-1-300x294.png"/>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="/css/styles.css?v=4"/>
+  <link rel="stylesheet" href="/css/styles.css?v=5"/>
   <!-- Preload the first hero frame so it paints before the slideshow starts cycling. -->
   <link rel="preload" as="image" href="/images/Sergei-RF-image.jpeg" fetchpriority="high"/>
 </head>
@@ -24,32 +24,32 @@
     <a href="#legacy">Legacy</a>
     <a href="#facilities">Facilities</a>
     <a href="/forms/training">Training</a>
+    <a href="#calendar">Calendar</a>
     <a href="/p/about-misc">About</a>
     <a href="/forms/contact">Contact</a>
+    <a href="https://miscopen.jgrogan.com" target="_blank" rel="noopener" style="color:var(--gold)">MISC Open ↗</a>
   </nav>
   <a href="/forms/join" class="btn btn-gold btn-sm">Apply Now</a>
 </header>
 
 <!-- ─── HERO ────────────────────────────────────────── -->
 <section class="hero">
-  <!-- Crossfading Ken-Burns hero slideshow — 6 frames from misc.org.au's homepage rotation.
+  <!-- Crossfading Ken-Burns hero slideshow — 4 frames, 28s cycle.
+       Frame order: Sergei RF (25m) · WA1500 revolver · Kodak B&W historic · Drone aerial.
        Real <img> elements (not CSS backgrounds) so they're guaranteed to paint,
        are accessible to screen readers, and play nicely with browser caching. -->
   <div class="hero-bg">
-    <img class="hero-bg-frame" src="/images/Sergei-RF-image.jpeg"             alt="MISC Rapid Fire shooter on the 25m line"     fetchpriority="high"/>
-    <img class="hero-bg-frame" src="/images/R-Motton-prone-Serv25.jpg"        alt="Service Match prone shooting at MISC"        loading="lazy"/>
-    <img class="hero-bg-frame" src="/images/WA1500-shooter.jpeg"              alt="WA1500 revolver shooter at MISC"             loading="lazy"/>
-    <img class="hero-bg-frame" src="/images/CAS-action-shot-1024x683.jpeg"    alt="Cowboy Action shooting at MISC"               loading="lazy"/>
-    <img class="hero-bg-frame" src="/images/Combined-Service-shooters.jpeg"   alt="Combined Service shooters on the line"        loading="lazy"/>
-    <img class="hero-bg-frame" src="/images/kodak-shooting-photo.jpg"         alt="Historic MISC competition photo"              loading="lazy"/>
-    <img class="hero-bg-frame" src="/images/drone-overhead-MISC-range.jpeg"   alt="Aerial drone view of MISC range, Port Melbourne" loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/Sergei-RF-image.jpeg"           alt="MISC Rapid Fire shooter on the 25m line"          fetchpriority="high"/>
+    <img class="hero-bg-frame" src="/images/WA1500-shooter.jpeg"            alt="WA1500 revolver shooter at MISC"                  loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/kodak-shooting-photo.jpg"       alt="Historic MISC competition photo"                  loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/drone-overhead-MISC-range.jpeg" alt="Aerial drone view of MISC range, Port Melbourne"  loading="lazy"/>
   </div>
   <div class="hero-overlay"></div>
   <div class="hero-grain"></div>
 
   <!-- Progress indicators — small dots show which frame is active -->
   <div class="hero-dots" aria-hidden="true">
-    <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span>
   </div>
 
   <div class="hero-content">
@@ -290,6 +290,37 @@
   </div>
 </section>
 
+<!-- ─── CALENDAR ────────────────────────────────────── -->
+<section id="calendar" class="section">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="section-eyebrow">05 · Club Calendar</span>
+      <h2 class="section-title">What's <span class="gold">on.</span></h2>
+      <p class="section-sub">Club shoots, state titles, ISSF matches, training nights and social events — MISC has something on the line every week of the year.</p>
+    </div>
+
+    <div class="calendar-block">
+      <a class="calendar-card reveal" style="--d:.05s" href="https://misc.org.au/index.php/club-calandar/" target="_blank" rel="noopener">
+        <div class="calendar-card-icon">📅</div>
+        <h4>Club Calendar</h4>
+        <p>Full fixture list — club championships, inter-club matches, social shoots, committee meetings and ISSF pathway events. Updated regularly by the MISC committee.</p>
+        <span class="arrow">View full calendar ↗</span>
+      </a>
+      <a class="calendar-card reveal" style="--d:.15s" href="https://miscopen.jgrogan.com" target="_blank" rel="noopener">
+        <div class="calendar-card-icon">🏆</div>
+        <h4>MISC Open 2027</h4>
+        <p>The Melbourne International Shooting Club Open — one of Australia's premier target shooting events. Squadding, results and registration all on the dedicated event site.</p>
+        <span class="arrow">Visit MISC Open ↗</span>
+      </a>
+    </div>
+
+    <div class="legacy-cta reveal">
+      <a href="https://misc.org.au/index.php/club-calandar/" target="_blank" rel="noopener" class="btn btn-gold btn-lg">Full club calendar <span>↗</span></a>
+      <a href="/forms/contact" class="btn btn-ghost btn-lg">Contact the committee</a>
+    </div>
+  </div>
+</section>
+
 <!-- ─── JOIN / CTA ──────────────────────────────────── -->
 <section id="join" class="section join-section">
   <div class="join-bg" style="background-image:url('/images/skanaker-2.png')"></div>
@@ -354,9 +385,15 @@
     <div>
       <h5>Members</h5>
       <a href="/forms/training">Wednesday training</a>
+      <a href="#calendar">Club calendar</a>
       <a href="/forms/join">Apply to join</a>
       <a href="/forms/contact">Contact</a>
       <a href="/admin/login">Admin</a>
+    </div>
+    <div>
+      <h5>Events</h5>
+      <a href="https://miscopen.jgrogan.com" target="_blank" rel="noopener">MISC Open 2027 ↗</a>
+      <a href="https://misc.org.au/index.php/club-calandar/" target="_blank" rel="noopener">Club calendar ↗</a>
     </div>
   </div>
   <div class="container footer-bar">
