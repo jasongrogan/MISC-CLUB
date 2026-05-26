@@ -7,7 +7,7 @@
   <title>MISC — Melbourne International Shooting Club · Est. 1955</title>
   <link rel="icon" href="/images/MISC-Colour-6x-1-300x294.png"/>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="/css/styles.css"/>
+  <link rel="stylesheet" href="/css/styles.css?v=2"/>
   <!-- Preload the first hero frame so it paints before the slideshow starts cycling. -->
   <link rel="preload" as="image" href="/images/Sergei-RF-image.jpeg" fetchpriority="high"/>
 </head>
@@ -33,15 +33,15 @@
 <!-- ─── HERO ────────────────────────────────────────── -->
 <section class="hero">
   <!-- Crossfading Ken-Burns hero slideshow — 6 frames from misc.org.au's homepage rotation.
-       Each frame is a real MISC member action shot (per landing-page-design skill:
-       avoid generic stock; show the actual product/people). -->
+       Real <img> elements (not CSS backgrounds) so they're guaranteed to paint,
+       are accessible to screen readers, and play nicely with browser caching. -->
   <div class="hero-bg">
-    <div class="hero-bg-frame" style="background-image:url('/images/Sergei-RF-image.jpeg')"></div>
-    <div class="hero-bg-frame" style="background-image:url('/images/R-Motton-prone-Serv25.jpg')"></div>
-    <div class="hero-bg-frame" style="background-image:url('/images/WA1500-shooter.jpeg')"></div>
-    <div class="hero-bg-frame" style="background-image:url('/images/CAS-action-shot-1024x683.jpeg')"></div>
-    <div class="hero-bg-frame" style="background-image:url('/images/Combined-Service-shooters.jpeg')"></div>
-    <div class="hero-bg-frame" style="background-image:url('/images/kodak-shooting-photo.jpg')"></div>
+    <img class="hero-bg-frame" src="/images/Sergei-RF-image.jpeg"             alt="MISC Rapid Fire shooter on the 25m line"     fetchpriority="high"/>
+    <img class="hero-bg-frame" src="/images/R-Motton-prone-Serv25.jpg"        alt="Service Match prone shooting at MISC"        loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/WA1500-shooter.jpeg"              alt="WA1500 revolver shooter at MISC"             loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/CAS-action-shot-1024x683.jpeg"    alt="Cowboy Action shooting at MISC"               loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/Combined-Service-shooters.jpeg"   alt="Combined Service shooters on the line"        loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/kodak-shooting-photo.jpg"         alt="Historic MISC competition photo"              loading="lazy"/>
   </div>
   <div class="hero-overlay"></div>
   <div class="hero-grain"></div>
