@@ -56,25 +56,27 @@ function shell(title, body) {
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${title} — MISC Club Admin</title><link rel="stylesheet" href="/css/styles.css"/></head>
 <body class="admin">
 <header class="admin-header"><div><strong>MISC Club Admin</strong></div>
-<nav><a href="/admin/">Dashboard</a><a href="/admin/pages">Pages</a><a href="/admin/posts">News</a><a href="/admin/training">Training</a><a href="/admin/submissions">Submissions</a><a href="/admin/settings">Settings</a>
+<nav><a href="/admin/">Dashboard</a><a href="/admin/pages">Pages</a><a href="/admin/posts">News</a><a href="/admin/events">Events</a><a href="/admin/training">Training</a><a href="/admin/submissions">Submissions</a><a href="/admin/settings">Settings</a>
 <button onclick="fetch('/admin/logout',{method:'POST'}).then(()=>location.href='/admin/login')" class="btn-link">Sign out</button></nav></header>
 <main>${body}</main></body></html>`;
 }
 
 router.get('/', (_req, res) => {
   const counts = {
-    pages: db.prepare(`SELECT COUNT(*) AS n FROM pages`).get().n,
-    posts: db.prepare(`SELECT COUNT(*) AS n FROM posts`).get().n,
-    contact: db.prepare(`SELECT COUNT(*) AS n FROM contact_submissions WHERE status='new'`).get().n,
-    join:    db.prepare(`SELECT COUNT(*) AS n FROM membership_applications WHERE status='new'`).get().n,
-    training:db.prepare(`SELECT COUNT(*) AS n FROM training_bookings WHERE status='confirmed'`).get().n,
-    sessions:db.prepare(`SELECT COUNT(*) AS n FROM training_sessions WHERE session_date >= date('now')`).get().n,
+    pages:    db.prepare(`SELECT COUNT(*) AS n FROM pages`).get().n,
+    posts:    db.prepare(`SELECT COUNT(*) AS n FROM posts`).get().n,
+    events:   db.prepare(`SELECT COUNT(*) AS n FROM events WHERE event_date >= date('now') AND is_published=1`).get().n,
+    contact:  db.prepare(`SELECT COUNT(*) AS n FROM contact_submissions WHERE status='new'`).get().n,
+    join:     db.prepare(`SELECT COUNT(*) AS n FROM membership_applications WHERE status='new'`).get().n,
+    training: db.prepare(`SELECT COUNT(*) AS n FROM training_bookings WHERE status='confirmed'`).get().n,
+    sessions: db.prepare(`SELECT COUNT(*) AS n FROM training_sessions WHERE session_date >= date('now')`).get().n,
   };
   res.send(shell('Dashboard', `
     <h1>Dashboard</h1>
     <div class="grid">
       <a class="card" href="/admin/pages"><h2>${counts.pages}</h2><p>Pages</p></a>
       <a class="card" href="/admin/posts"><h2>${counts.posts}</h2><p>News posts</p></a>
+      <a class="card" href="/admin/events"><h2>${counts.events}</h2><p>Upcoming events</p></a>
       <a class="card" href="/admin/submissions?type=contact"><h2>${counts.contact}</h2><p>New contact messages</p></a>
       <a class="card" href="/admin/submissions?type=join"><h2>${counts.join}</h2><p>New membership applications</p></a>
       <a class="card" href="/admin/training"><h2>${counts.training}</h2><p>Confirmed training bookings</p></a>
@@ -221,6 +223,97 @@ router.post('/settings', express.urlencoded({ extended: true }), (req, res) => {
   const tx = db.transaction(() => { Object.entries(req.body).forEach(([k,v])=>stmt.run(k, String(v))); });
   tx();
   res.redirect('/admin/settings');
+});
+
+/* ── Events CRUD ─────────────────────────────────────── */
+const CATS = ['competition','club','training','social','external'];
+
+router.get('/events', (_req, res) => {
+  const rows = db.prepare(`SELECT * FROM events ORDER BY event_date, start_time`).all();
+  res.send(shell('Events', `
+    <h1>Club Calendar Events (${rows.length})</h1>
+    <p style="margin-bottom:20px"><a href="/admin/events/new" class="btn btn-sm" style="background:var(--gold);color:#111;border:none">+ New event</a>
+    &nbsp;<a href="/calendar" target="_blank" style="color:var(--muted);font-size:.85rem">View public calendar ↗</a></p>
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Time</th><th>Published</th><th></th></tr></thead>
+      <tbody>
+      ${rows.map(r=>`<tr>
+        <td>${esc(r.event_date)}${r.end_date&&r.end_date!==r.event_date?' → '+esc(r.end_date):''}</td>
+        <td>${esc(r.title)}</td>
+        <td><code>${esc(r.category)}</code></td>
+        <td>${esc(r.start_time||'')}${r.end_time?' – '+esc(r.end_time):''}</td>
+        <td>${r.is_published?'✓':''}</td>
+        <td><a href="/admin/events/${r.id}">Edit</a></td>
+      </tr>`).join('')}
+      </tbody>
+    </table>`));
+});
+
+function eventForm(ev, action) {
+  const v = f => esc(ev?.[f] ?? '');
+  const checked = (f, val) => (ev?.[f] ?? '') === val ? 'selected' : '';
+  return `<form method="POST" action="${action}" class="form">
+    <label>Title *<input name="title" value="${v('title')}" required maxlength="200"/></label>
+    <div class="row">
+      <label>Start date *<input name="event_date" type="date" value="${v('event_date')}" required/></label>
+      <label>End date (multi-day)<input name="end_date" type="date" value="${v('end_date')}"/></label>
+    </div>
+    <div class="row">
+      <label>Start time<input name="start_time" type="time" value="${v('start_time')}"/></label>
+      <label>End time<input name="end_time" type="time" value="${v('end_time')}"/></label>
+    </div>
+    <label>Category
+      <select name="category">
+        ${CATS.map(c=>`<option value="${c}" ${checked('category',c)||(!ev?.category&&c==='club'?'selected':'')}>${c}</option>`).join('')}
+      </select>
+    </label>
+    <label>Description<textarea name="description" rows="4" maxlength="2000">${v('description')}</textarea></label>
+    <label>Location<input name="location" value="${v('location')||'120–128 Todd Road, Port Melbourne'}" maxlength="200"/></label>
+    <label>External URL<input name="external_url" type="url" value="${v('external_url')}" maxlength="400" placeholder="https://..."/></label>
+    <label><input type="checkbox" name="is_published" value="1" ${ev==null||ev.is_published?'checked':''}/> Published</label>
+    <button class="btn" type="submit">Save event</button>
+    <a href="/admin/events" style="margin-left:12px">Cancel</a>
+  </form>`;
+}
+
+router.get('/events/new', (_req, res) => {
+  res.send(shell('New event', `<h1>New event</h1>${eventForm(null, '/admin/events')}`));
+});
+
+router.post('/events', express.urlencoded({ extended: true }), (req, res) => {
+  const f = req.body;
+  if (!f.title || !f.event_date) return res.redirect('/admin/events/new');
+  db.prepare(`INSERT INTO events (title,event_date,end_date,start_time,end_time,category,description,location,external_url,is_published)
+    VALUES (?,?,?,?,?,?,?,?,?,?)`)
+    .run(f.title, f.event_date, f.end_date||null, f.start_time||null, f.end_time||null,
+         f.category||'club', f.description||null, f.location||null, f.external_url||null, f.is_published?1:0);
+  res.redirect('/admin/events');
+});
+
+router.get('/events/:id', (req, res) => {
+  const ev = db.prepare(`SELECT * FROM events WHERE id=?`).get(req.params.id);
+  if (!ev) return res.status(404).send('not found');
+  res.send(shell('Edit event', `
+    <h1>Edit: ${esc(ev.title)}</h1>
+    ${eventForm(ev, `/admin/events/${ev.id}`)}
+    <hr style="margin-top:32px"/>
+    <form method="POST" action="/admin/events/${ev.id}/delete" onsubmit="return confirm('Delete this event?')">
+      <button type="submit" style="background:var(--crimson);color:#fff;border:none;padding:10px 20px;border-radius:2px;cursor:pointer">Delete event</button>
+    </form>`));
+});
+
+router.post('/events/:id', express.urlencoded({ extended: true }), (req, res) => {
+  const f = req.body;
+  db.prepare(`UPDATE events SET title=?,event_date=?,end_date=?,start_time=?,end_time=?,category=?,description=?,location=?,external_url=?,is_published=? WHERE id=?`)
+    .run(f.title, f.event_date, f.end_date||null, f.start_time||null, f.end_time||null,
+         f.category||'club', f.description||null, f.location||null, f.external_url||null, f.is_published?1:0,
+         req.params.id);
+  res.redirect('/admin/events');
+});
+
+router.post('/events/:id/delete', (req, res) => {
+  db.prepare(`DELETE FROM events WHERE id=?`).run(req.params.id);
+  res.redirect('/admin/events');
 });
 
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

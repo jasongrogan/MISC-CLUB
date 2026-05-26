@@ -7,7 +7,7 @@
   <title>MISC — Melbourne International Shooting Club · Est. 1955</title>
   <link rel="icon" href="/images/MISC-Colour-6x-1-300x294.png"/>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="/css/styles.css?v=6"/>
+  <link rel="stylesheet" href="/css/styles.css?v=7"/>
   <!-- Preload the first hero frame so it paints before the slideshow starts cycling. -->
   <link rel="preload" as="image" href="/images/Sergei-RF-image.jpeg" fetchpriority="high"/>
 </head>
@@ -304,27 +304,17 @@
     <div class="section-head reveal">
       <span class="section-eyebrow">05 · Club Calendar</span>
       <h2 class="section-title">What's <span class="gold">on.</span></h2>
-      <p class="section-sub">Club shoots, state titles, ISSF matches, training nights and social events — MISC has something on the line every week of the year.</p>
+      <p class="section-sub">Club shoots, state titles, ISSF matches and social events — every Wednesday night training is members-only, but competition days are open to all licensed shooters.</p>
     </div>
 
-    <div class="calendar-block">
-      <a class="calendar-card reveal" style="--d:.05s" href="https://misc.org.au/index.php/club-calandar/" target="_blank" rel="noopener">
-        <div class="calendar-card-icon">📅</div>
-        <h4>Club Calendar</h4>
-        <p>Full fixture list — club championships, inter-club matches, social shoots, committee meetings and ISSF pathway events. Updated regularly by the MISC committee.</p>
-        <span class="arrow">View full calendar ↗</span>
-      </a>
-      <a class="calendar-card reveal" style="--d:.15s" href="https://miscopen.jgrogan.com" target="_blank" rel="noopener">
-        <div class="calendar-card-icon">🏆</div>
-        <h4>MISC Open 2027</h4>
-        <p>The Melbourne International Shooting Club Open — one of Australia's premier target shooting events. Squadding, results and registration all on the dedicated event site.</p>
-        <span class="arrow">Visit MISC Open ↗</span>
-      </a>
+    <!-- Upcoming events — populated from /api/events/upcoming -->
+    <div id="upcoming-events-list" class="upcoming-list reveal">
+      <div class="upcoming-placeholder">Loading upcoming events…</div>
     </div>
 
-    <div class="legacy-cta reveal">
-      <a href="https://misc.org.au/index.php/club-calandar/" target="_blank" rel="noopener" class="btn btn-gold btn-lg">Full club calendar <span>↗</span></a>
-      <a href="/forms/contact" class="btn btn-ghost btn-lg">Contact the committee</a>
+    <div class="legacy-cta reveal" style="margin-top:8px">
+      <a href="/calendar" class="btn btn-gold btn-lg">Full calendar <span>→</span></a>
+      <a href="https://miscopen.jgrogan.com" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">MISC Open 2027 ↗</a>
     </div>
   </div>
 </section>
@@ -393,7 +383,7 @@
     <div>
       <h5>Members</h5>
       <a href="/forms/training">Wednesday training</a>
-      <a href="#calendar">Club calendar</a>
+      <a href="/calendar">Club calendar</a>
       <a href="/forms/join">Apply to join</a>
       <a href="/forms/contact">Contact</a>
       <a href="/admin/login">Admin</a>
@@ -401,7 +391,7 @@
     <div>
       <h5>Events</h5>
       <a href="https://miscopen.jgrogan.com" target="_blank" rel="noopener">MISC Open 2027 ↗</a>
-      <a href="https://misc.org.au/index.php/club-calandar/" target="_blank" rel="noopener">Club calendar ↗</a>
+      <a href="/calendar">Club calendar</a>
     </div>
   </div>
   <div class="container footer-bar">
@@ -422,6 +412,46 @@
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
   }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // Upcoming events widget — fetches from /api/events/upcoming
+  const CAT_COLORS = { competition:'#C8102E', club:'#C9A84C', training:'#4A90D9', social:'#5AAB6A', external:'#6A6A6A' };
+  const CAT_LABELS = { competition:'Competition', club:'Club shoot', training:'Training', social:'Social', external:'External' };
+  const MONTHS_S   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DAYS_S     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  fetch('/api/events/upcoming?limit=6')
+    .then(r => r.json())
+    .then(events => {
+      const el = document.getElementById('upcoming-events-list');
+      if (!el) return;
+      if (!events || !events.length) {
+        el.innerHTML = '<div class="upcoming-placeholder">No upcoming events scheduled — check back soon.</div>';
+        return;
+      }
+      el.innerHTML = events.map(ev => {
+        const d   = new Date(ev.event_date + 'T00:00:00');
+        const col = CAT_COLORS[ev.category] || CAT_COLORS.club;
+        const lbl = CAT_LABELS[ev.category] || ev.category;
+        const multi = ev.end_date && ev.end_date !== ev.event_date;
+        const endD  = multi ? new Date(ev.end_date + 'T00:00:00') : null;
+        const loc   = ev.location ? ev.location.replace('120–128 Todd Road, Port Melbourne','Port Melbourne') : '';
+        return `<div class="upcoming-item">
+          <div class="upcoming-date">
+            <strong>${d.getDate()}</strong>
+            <span>${DAYS_S[d.getDay()]} ${MONTHS_S[d.getMonth()]} ${d.getFullYear()}</span>
+            ${multi ? `<span>→ ${endD.getDate()} ${MONTHS_S[endD.getMonth()]}</span>` : ''}
+          </div>
+          <div class="upcoming-body">
+            <span class="upcoming-cat" style="background:${col}22;color:${col}">${lbl}</span>
+            <h5>${ev.title}</h5>
+            <p>${loc}${ev.start_time ? (loc?' · ':'')+ev.start_time+(ev.end_time?' – '+ev.end_time:'') : ''}</p>
+          </div>
+        </div>`;
+      }).join('');
+    })
+    .catch(() => {
+      const el = document.getElementById('upcoming-events-list');
+      if (el) el.innerHTML = '<div class="upcoming-placeholder"><a href="/calendar" style="color:var(--gold)">View the club calendar →</a></div>';
+    });
 </script>
 </body>
 </html>

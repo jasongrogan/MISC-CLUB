@@ -169,6 +169,24 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
   status         TEXT NOT NULL DEFAULT 'confirmed',
   created_at     DATETIME DEFAULT (datetime('now'))
 );
+
+-- Club calendar events — managed via admin, displayed on /calendar
+CREATE TABLE IF NOT EXISTS events (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  title        TEXT NOT NULL,
+  event_date   TEXT NOT NULL,          -- YYYY-MM-DD (start date)
+  end_date     TEXT,                   -- YYYY-MM-DD for multi-day events
+  start_time   TEXT,                   -- HH:MM (optional)
+  end_time     TEXT,                   -- HH:MM (optional)
+  category     TEXT NOT NULL DEFAULT 'club',  -- club | competition | training | social | external
+  description  TEXT,
+  location     TEXT DEFAULT '120–128 Todd Road, Port Melbourne',
+  external_url TEXT,
+  is_published INTEGER NOT NULL DEFAULT 1,
+  created_at   DATETIME DEFAULT (datetime('now')),
+  UNIQUE(title, event_date)
+);
+CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date);
 `);
 
 /* ── seeded settings ─────────────────────────────────────── */
@@ -273,6 +291,50 @@ const reconcile = db.transaction(() => {
   }
 });
 reconcile();
+
+/* ── events seed data ─────────────────────────────────────────────────────
+   Idempotent thanks to UNIQUE(title, event_date) + ON CONFLICT DO NOTHING.
+   Seeded on every startup so a fresh DB immediately has a useful calendar.
+   ──────────────────────────────────────────────────────────────────────── */
+const seedEvent = db.prepare(`
+  INSERT INTO events (title, event_date, end_date, start_time, end_time, category, description, location, external_url)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(title, event_date) DO NOTHING
+`);
+const seedEvents = db.transaction(() => {
+  const LOC  = '120–128 Todd Road, Port Melbourne';
+  const MISC = 'https://misc.org.au';
+  const ev = [
+    // ── 2026 ───────────────────────────────────────────
+    ['Club Pistol Championship — June',           '2026-06-06', null,         '08:30','13:00','competition','Monthly club pistol championship. Open to all financial MISC pistol members. Full ISSF programme.',LOC,null],
+    ['Interclub Match — MISC vs SASC',            '2026-06-27', null,         '09:00','14:00','competition','Friendly interclub pistol match. All disciplines welcome.',LOC,null],
+    ['Club Pistol Championship — July',           '2026-07-04', null,         '08:30','13:00','competition','Monthly club pistol championship. Open to all financial MISC pistol members.',LOC,null],
+    ['Club Rifle Championship — July',            '2026-07-11', null,         '09:00','13:00','competition','Monthly club rifle championship — Prone, Bench Rest, Positional.',LOC,null],
+    ['Club Pistol Championship — August',         '2026-08-01', null,         '08:30','13:00','competition','Monthly club pistol championship.',LOC,null],
+    ['MISC Club AGM',                             '2026-08-17', null,         '19:00','21:00','club',       'Annual General Meeting — all members welcome and encouraged to attend.',LOC,null],
+    ['Club Pistol Championship — September',      '2026-09-05', null,         '08:30','13:00','competition','Monthly club pistol championship.',LOC,null],
+    ['Victorian State Pistol Championships',      '2026-09-19', '2026-09-20', '08:00','17:00','competition','Two-day State Pistol Championships — ISSF disciplines. MISC members competing.',LOC,MISC],
+    ['Club Pistol Championship — October',        '2026-10-03', null,         '08:30','13:00','competition','Monthly club pistol championship.',LOC,null],
+    ['WA1500 Charity Shoot',                      '2026-10-17', null,         '09:00','14:00','competition','Annual WA1500 revolver charity shoot — entry by donation. All welcome.',LOC,null],
+    ['Club Pistol Championship — November',       '2026-11-07', null,         '08:30','13:00','competition','Monthly club pistol championship.',LOC,null],
+    ['MISC Open — 2026',                          '2026-11-21', '2026-11-22', '08:00','17:00','competition','The Melbourne International Shooting Club Open. Two-day ISSF pistol & rifle competition.',LOC,'https://miscopen.jgrogan.com'],
+    ['Club Pistol Championship — December',       '2026-12-05', null,         '08:30','13:00','competition','Monthly club pistol championship — final shoot of the year.',LOC,null],
+    ['End of Year Social Shoot & BBQ',            '2026-12-13', null,         '09:00','14:00','social',     'Casual year-end social shoot followed by a club BBQ. Bring the family.',LOC,null],
+    // ── 2027 ───────────────────────────────────────────
+    ['Club Pistol Championship — January',        '2027-01-10', null,         '08:30','13:00','competition','Monthly club pistol championship.',LOC,null],
+    ['Summer Interclub Match',                    '2027-01-24', null,         '09:00','14:00','competition','Interclub pistol match — hosted at MISC.',LOC,null],
+    ['Club Pistol Championship — February',       '2027-02-07', null,         '08:30','13:00','competition','Monthly club pistol championship.',LOC,null],
+    ['Victorian Postal Air Pistol',               '2027-02-20', '2027-02-21', '09:00','15:00','competition','State postal air pistol competition — scores submitted electronically. ISSF 10m.',LOC,MISC],
+    ['Club Pistol Championship — March',          '2027-03-07', null,         '08:30','13:00','competition','Monthly club pistol championship.',LOC,null],
+    ['Club Rifle Championship — March',           '2027-03-21', null,         '09:00','13:00','competition','Quarterly club rifle championship.',LOC,null],
+    ['Club Pistol Championship — April',          '2027-04-05', null,         '08:30','13:00','competition','Monthly club pistol championship.',LOC,null],
+    ['ANZAC Day Memorial Shoot',                  '2027-04-25', null,         '10:00','13:00','club',       'Annual ANZAC Day memorial shoot. A solemn and proud club tradition since 1957.',LOC,null],
+    ['Club Pistol Championship — May',            '2027-05-03', null,         '08:30','13:00','competition','Monthly club pistol championship.',LOC,null],
+    ['MISC Open 2027',                            '2027-05-14', '2027-05-17', '08:00','17:00','competition','The MISC Open 2027 — flagship four-day ISSF pistol & rifle event. Registration open.',LOC,'https://miscopen.jgrogan.com'],
+  ];
+  ev.forEach(r => seedEvent.run(...r));
+});
+seedEvents();
 
 module.exports = db;
 module.exports.DISCIPLINES = DISCIPLINES;

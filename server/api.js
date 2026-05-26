@@ -372,4 +372,163 @@ router.post('/forms/training/book/:sessionId', (req, res) => {
   `));
 });
 
+/* ── Club Calendar ──────────────────────────────────────────────────────
+   /calendar          — monthly grid page (server-rendered)
+   /api/events/upcoming — JSON list of next N events (for homepage widget)
+   ──────────────────────────────────────────────────────────────────────── */
+const CAT_COLOR = { competition:'#C8102E', club:'#C9A84C', training:'#4A90D9', social:'#5AAB6A', external:'#6A6A6A' };
+const CAT_LABEL = { competition:'Competition', club:'Club shoot', training:'Training', social:'Social', external:'External' };
+const MONTHS    = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS_MON  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function calShell(title, body) {
+  return `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>${esc(title)} — MISC Club</title>
+<link rel="icon" href="/images/MISC-Colour-6x-1-300x294.png"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/styles.css"/></head>
+<body class="calendar-page">
+<div class="topstrip">A private, members-only club &nbsp;·&nbsp; Port Melbourne, Victoria &nbsp;·&nbsp; Affiliated with <a href="https://www.vapa.org.au" target="_blank" rel="noopener">VAPA</a> &amp; <a href="https://www.trv.org.au" target="_blank" rel="noopener">TRV</a></div>
+<header class="topbar scrolled" id="topbar">
+  <a class="logo" href="/"><img src="/images/MISC-Colour-6x-1-300x294.png" alt="MISC" width="36" height="36"/>
+    <span><strong>MISC</strong><em>Melbourne International Shooting Club</em></span></a>
+  <nav class="topnav">
+    <a href="/#disciplines">Disciplines</a>
+    <a href="/forms/training">Training</a>
+    <a href="/calendar" style="color:var(--gold)">Calendar</a>
+    <a href="/p/about-misc">About</a>
+    <a href="/forms/contact">Contact</a>
+    <a href="https://miscopen.jgrogan.com" target="_blank" rel="noopener" style="color:var(--gold)">MISC Open ↗</a>
+  </nav>
+  <a href="/forms/join" class="btn btn-gold btn-sm">Apply Now</a>
+</header>
+<main class="cal-page-wrap">${body}</main>
+<footer class="site-footer"><div class="container footer-bar">
+  <p>&copy; 2026 Melbourne International Shooting Club · <a href="mailto:miscevents@misc.org.au">miscevents@misc.org.au</a></p>
+  <p>120–128 Todd Road, Port Melbourne VIC 3207</p>
+</div></footer>
+<script>
+  const tb = document.getElementById('topbar');
+  document.addEventListener('scroll', () => tb.classList.toggle('scrolled', window.scrollY > 0), { passive: true });
+</script>
+</body></html>`;
+}
+
+router.get('/calendar', (req, res) => {
+  const now   = new Date();
+  const year  = Math.min(Math.max(parseInt(req.query.year)  || now.getFullYear(), 2020), 2035);
+  const month = Math.min(Math.max(parseInt(req.query.month) || (now.getMonth() + 1), 1), 12);
+  const prev  = month === 1  ? { year: year-1, month: 12 } : { year, month: month-1 };
+  const next  = month === 12 ? { year: year+1, month: 1  } : { year, month: month+1 };
+  const pad   = n => String(n).padStart(2, '0');
+  const mStr  = `${year}-${pad(month)}`;
+
+  // Fetch events whose date range overlaps this month
+  const events = db.prepare(`
+    SELECT * FROM events
+     WHERE is_published = 1
+       AND event_date  <= ? AND (end_date >= ? OR (end_date IS NULL AND event_date >= ?))
+     ORDER BY event_date, start_time
+  `).all(`${mStr}-31`, `${mStr}-01`, `${mStr}-01`);
+
+  // Map events to day numbers within this month
+  const evByDay = {};
+  events.forEach(ev => {
+    const startD = Math.max(1, ev.event_date.slice(0,7) === mStr ? parseInt(ev.event_date.slice(8)) : 1);
+    const endD   = ev.end_date
+      ? (ev.end_date.slice(0,7) === mStr ? parseInt(ev.end_date.slice(8)) : new Date(year, month, 0).getDate())
+      : startD;
+    for (let d = startD; d <= endD; d++) (evByDay[d] = evByDay[d] || []).push(ev);
+  });
+
+  // Build grid cells (Mon-start)
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstDow    = (new Date(year, month-1, 1).getDay() + 6) % 7; // 0=Mon
+  const todayDay    = now.getFullYear()===year && (now.getMonth()+1)===month ? now.getDate() : -1;
+  let cells = '';
+  for (let i = 0; i < firstDow; i++) cells += `<div class="cal-cell empty"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dayEvs = evByDay[d] || [];
+    const dots   = dayEvs.map(ev =>
+      `<span class="cal-dot" style="background:${CAT_COLOR[ev.category]||CAT_COLOR.club}" title="${esc(ev.title)}"></span>`
+    ).join('');
+    cells += `<div class="cal-cell${d===todayDay?' today':''}"><span class="cal-num">${d}</span>${dots?`<div class="cal-dots">${dots}</div>`:''}</div>`;
+  }
+  const trail = (firstDow + daysInMonth) % 7;
+  if (trail) for (let i = trail; i < 7; i++) cells += `<div class="cal-cell empty"></div>`;
+
+  // Build event list (deduplicated — show each event once by its start date)
+  const seen = new Set();
+  const eventListHtml = events.filter(ev => { if (seen.has(ev.id)) return false; seen.add(ev.id); return true; }).map(ev => {
+    const d      = new Date(ev.event_date + 'T00:00:00');
+    const col    = CAT_COLOR[ev.category] || CAT_COLOR.club;
+    const multi  = ev.end_date && ev.end_date !== ev.event_date;
+    const endD   = multi ? new Date(ev.end_date + 'T00:00:00') : null;
+    const timeStr = [ev.start_time, ev.end_time].filter(Boolean).join(' – ');
+    return `<div class="cal-event-item" style="border-left-color:${col}">
+      <div class="cal-event-date">
+        <strong>${d.getDate()}</strong>
+        <span>${d.toLocaleDateString('en-AU',{weekday:'short'}).toUpperCase()} ${d.toLocaleDateString('en-AU',{month:'short'}).toUpperCase()}</span>
+        ${multi?`<span class="cal-event-to">–${endD.getDate()} ${endD.toLocaleDateString('en-AU',{month:'short'}).toUpperCase()}</span>`:''}
+      </div>
+      <div class="cal-event-body">
+        <span class="cal-cat-badge" style="background:${col}22;color:${col}">${esc(CAT_LABEL[ev.category]||ev.category)}</span>
+        <h4>${esc(ev.title)}</h4>
+        ${ev.description?`<p>${esc(ev.description)}</p>`:''}
+        <div class="cal-event-meta">
+          ${timeStr?`<span>⏱ ${esc(timeStr)}</span>`:''}
+          ${ev.location?`<span>📍 ${esc(ev.location)}</span>`:''}
+          ${ev.external_url?`<a href="${esc(ev.external_url)}" target="_blank" rel="noopener">More info ↗</a>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('') || `<div class="cal-empty-msg">No events scheduled for ${MONTHS[month-1]} ${year}.</div>`;
+
+  res.send(calShell(`${MONTHS[month-1]} ${year} Calendar`, `
+  <div class="container">
+    <div class="cal-page-header">
+      <span class="section-eyebrow">Club Calendar</span>
+      <div class="cal-nav">
+        <a href="/calendar?year=${prev.year}&month=${prev.month}" class="btn btn-ghost cal-nav-btn">← ${MONTHS[prev.month-1]}</a>
+        <h1 class="cal-month-title">${MONTHS[month-1]} <span class="gold">${year}</span></h1>
+        <a href="/calendar?year=${next.year}&month=${next.month}" class="btn btn-ghost cal-nav-btn">${MONTHS[next.month-1]} →</a>
+      </div>
+    </div>
+
+    <div class="cal-legend">
+      ${Object.entries(CAT_COLOR).map(([cat,col]) =>
+        `<span class="cal-legend-item"><span class="cal-dot" style="background:${col}"></span>${esc(CAT_LABEL[cat]||cat)}</span>`
+      ).join('')}
+    </div>
+
+    <div class="cal-grid">
+      ${DAYS_MON.map(d=>`<div class="cal-dow">${d}</div>`).join('')}
+      ${cells}
+    </div>
+
+    <h3 class="cal-events-heading">${MONTHS[month-1]} ${year}</h3>
+    <div class="cal-events-list">${eventListHtml}</div>
+
+    <div class="legacy-cta" style="margin-top:56px;padding-bottom:80px">
+      <a href="/calendar?year=${prev.year}&month=${prev.month}" class="btn btn-ghost">← ${MONTHS[prev.month-1]}</a>
+      <a href="/forms/join" class="btn btn-gold">Apply for membership <span>→</span></a>
+      <a href="/calendar?year=${next.year}&month=${next.month}" class="btn btn-ghost">${MONTHS[next.month-1]} →</a>
+    </div>
+  </div>`));
+});
+
+/* Upcoming events JSON — used by homepage widget */
+router.get('/api/events/upcoming', (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 6, 20);
+  const rows = db.prepare(`
+    SELECT id, title, event_date, end_date, start_time, end_time, category, description, location, external_url
+      FROM events
+     WHERE event_date >= date('now') AND is_published = 1
+     ORDER BY event_date, start_time
+     LIMIT ?
+  `).all(limit);
+  res.json(rows);
+});
+
 module.exports = router;
