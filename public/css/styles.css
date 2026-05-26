@@ -64,7 +64,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .hero { position: relative; min-height: 100vh; display: flex; align-items: center; padding: 80px var(--pad-x) 120px; overflow: hidden; isolation: isolate; }
 
 /* ── Crossfading Ken-Burns slideshow ─────────────────────────────────────
-   6 frames × 7s visible each + 1s crossfade = 42s full cycle.
+   7 frames × 7s visible each = 49s full cycle (last frame is the aerial
+   drone shot — a "where we are" reveal that closes the rotation).
    Each frame slowly zooms (Ken Burns) while visible, then crossfades to the
    next. Reduced-motion users see only frame 1 with no animation.
    ──────────────────────────────────────────────────────────────────────── */
@@ -79,12 +80,12 @@ button, input, textarea, select { font: inherit; color: inherit; }
   opacity: 0;
   transform: scale(1.05);
   will-change: opacity, transform;
-  animation: heroCrossfade 42s infinite cubic-bezier(.4,0,.2,1), heroKenBurns 42s infinite linear;
+  animation: heroCrossfade 49s infinite cubic-bezier(.4,0,.2,1), heroKenBurns 49s infinite linear;
 }
 /* Frame 1 needs its OWN crossfade so it's visible at page load (no blank intro).
-   It fades back in during 95-100% so the cycle loops continuously. */
+   It fades back in during 96-100% so the cycle loops continuously. */
 .hero-bg-frame:nth-child(1) {
-  animation: heroCrossfadeFirst 42s infinite cubic-bezier(.4,0,.2,1), heroKenBurns 42s infinite linear;
+  animation: heroCrossfadeFirst 49s infinite cubic-bezier(.4,0,.2,1), heroKenBurns 49s infinite linear;
   animation-delay: 0s, 0s;
 }
 .hero-bg-frame:nth-child(2) { animation-delay:  7s,  7s; }
@@ -92,27 +93,30 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .hero-bg-frame:nth-child(4) { animation-delay: 21s, 21s; }
 .hero-bg-frame:nth-child(5) { animation-delay: 28s, 28s; }
 .hero-bg-frame:nth-child(6) { animation-delay: 35s, 35s; }
+.hero-bg-frame:nth-child(7) { animation-delay: 42s, 42s; }
 
-/* Frames 2-6: invisible at start of cycle, fade in, hold, fade out */
+/* Frames 2-7: invisible at start of cycle, fade in, hold ~5.5s, fade out.
+   7 of 49 seconds visible = ~14.3%; we hold opacity 1 from 2.5% to 13.5%
+   and fade through 1.2s on each side. */
 @keyframes heroCrossfade {
-  0%   { opacity: 0; }
-  3%   { opacity: 1; }   /* fade in over ~1.2s */
-  16%  { opacity: 1; }   /* hold ~5.5s */
-  19%  { opacity: 0; }   /* fade out over ~1.2s */
-  100% { opacity: 0; }
+  0%    { opacity: 0; }
+  2.5%  { opacity: 1; }
+  13.5% { opacity: 1; }
+  16%   { opacity: 0; }
+  100%  { opacity: 0; }
 }
-/* Frame 1: visible at start, fades out at 17%, fades back in at end for the loop */
+/* Frame 1: visible at start, fades out at ~14.5%, fades back in 97-100%. */
 @keyframes heroCrossfadeFirst {
   0%    { opacity: 1; }
-  14%   { opacity: 1; }
-  17%   { opacity: 0; }
+  12%   { opacity: 1; }
+  14.5% { opacity: 0; }
   97%   { opacity: 0; }
   100%  { opacity: 1; }
 }
 /* Subtle zoom while frame is on screen — gives the still photos motion */
 @keyframes heroKenBurns {
   0%   { transform: scale(1.05); }
-  19%  { transform: scale(1.18); }
+  16%  { transform: scale(1.18); }
   100% { transform: scale(1.18); }
 }
 
@@ -125,17 +129,18 @@ button, input, textarea, select { font: inherit; color: inherit; }
 /* ── Progress dots (which slide is active) ──────────────────────────── */
 .hero-dots { position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; gap: 8px; }
 .hero-dots span { width: 28px; height: 2px; background: rgba(255,255,255,.18); border-radius: 1px; overflow: hidden; position: relative; }
-.hero-dots span::after { content: ''; position: absolute; inset: 0; background: var(--gold); transform: translateX(-100%); animation: dotFill 42s linear infinite; }
+.hero-dots span::after { content: ''; position: absolute; inset: 0; background: var(--gold); transform: translateX(-100%); animation: dotFill 49s linear infinite; }
 .hero-dots span:nth-child(1)::after { animation-delay:  0s; }
 .hero-dots span:nth-child(2)::after { animation-delay:  7s; }
 .hero-dots span:nth-child(3)::after { animation-delay: 14s; }
 .hero-dots span:nth-child(4)::after { animation-delay: 21s; }
 .hero-dots span:nth-child(5)::after { animation-delay: 28s; }
 .hero-dots span:nth-child(6)::after { animation-delay: 35s; }
+.hero-dots span:nth-child(7)::after { animation-delay: 42s; }
 @keyframes dotFill {
   0%   { transform: translateX(-100%); }
-  16%  { transform: translateX(0%); }
-  17%, 100% { transform: translateX(100%); }
+  14%  { transform: translateX(0%); }
+  15%, 100% { transform: translateX(100%); }
 }
 @media (max-width: 640px) { .hero-dots { bottom: 96px; } .hero-dots span { width: 18px; } }
 
