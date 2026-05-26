@@ -114,15 +114,15 @@ function fmtSessionDate(iso) {
 router.get('/forms/training', (req, res) => {
   const filterDiscipline = String(req.query.discipline || '').trim();
 
-  // Pull upcoming sessions with booking counts (next 8 Wednesdays)
+  // Pull upcoming sessions with booking counts (next ~12 Wednesdays × disciplines × slots)
   const rows = db.prepare(`
-    SELECT s.id, s.session_date, s.discipline, s.start_time, s.end_time, s.capacity, s.is_open,
+    SELECT s.id, s.session_date, s.discipline, s.slot_index, s.start_time, s.end_time, s.capacity, s.is_open,
            (SELECT COUNT(*) FROM training_bookings b WHERE b.session_id = s.id AND b.status IN ('confirmed','attended')) AS booked
       FROM training_sessions s
      WHERE s.session_date >= date('now')
        ${filterDiscipline ? "AND s.discipline = ?" : ''}
-     ORDER BY s.session_date, s.discipline
-     LIMIT 60
+     ORDER BY s.session_date, s.discipline, s.slot_index
+     LIMIT 120
   `).all(...(filterDiscipline ? [filterDiscipline] : []));
 
   // Group by date for tidy display
@@ -137,18 +137,29 @@ router.get('/forms/training', (req, res) => {
       ).join('')}
     </div>`;
 
+  // Format a friendly time range (e.g. "6:30 – 7:25 pm")
+  const fmtTime = (s) => {
+    const [hh, mm] = s.split(':');
+    const h = parseInt(hh, 10);
+    const h12 = ((h + 11) % 12) + 1;
+    return `${h12}:${mm}${h >= 12 ? 'pm' : 'am'}`;
+  };
+
   const sessionList = Object.entries(byDate).map(([date, sessions]) => `
     <div class="session-day">
-      <h3 class="session-date">${esc(fmtSessionDate(date))}<span class="session-time">${esc(sessions[0].start_time)} – ${esc(sessions[0].end_time)}</span></h3>
+      <h3 class="session-date">${esc(fmtSessionDate(date))}</h3>
       <div class="session-grid">
         ${sessions.map(s => {
           const remaining = Math.max(0, s.capacity - s.booked);
           const isFull = remaining === 0;
           const meta = DISCIPLINE_META[s.discipline] || { label: s.discipline, blurb: '', icon: '•' };
+          // Distinguish the two air-pistol time slots in the label
+          const slotSuffix = (s.discipline === 'air-pistol' && s.slot_index === 2) ? ' · Late' : (s.discipline === 'air-pistol' ? ' · Early' : '');
           return `
             <div class="session-card ${isFull ? 'full' : ''}">
               <div class="session-icon">${meta.icon}</div>
-              <h4>${esc(meta.label)}</h4>
+              <div class="session-card-time">${esc(fmtTime(s.start_time))} – ${esc(fmtTime(s.end_time))}</div>
+              <h4>${esc(meta.label)}${esc(slotSuffix)}</h4>
               <p>${esc(meta.blurb)}</p>
               <div class="session-meta">
                 <span class="cap-pill ${isFull?'cap-full':remaining<=2?'cap-low':'cap-ok'}">${isFull?'Full':`${remaining}/${s.capacity} spots`}</span>
@@ -162,12 +173,23 @@ router.get('/forms/training', (req, res) => {
     </div>`).join('');
 
   res.send(renderFormShell('Wednesday Training', `
+    <div class="members-banner">
+      <span class="mb-icon">🔒</span>
+      <div>
+        <strong>MISC members only.</strong>
+        <span>Wednesday training sessions are reserved for current MISC members. Not a member yet? <a href="/forms/join">Apply to join →</a></span>
+      </div>
+    </div>
     <div class="training-intro">
       <span class="section-eyebrow gold-text">Wednesday-night fundamentals</span>
       <h1>Training Sessions</h1>
-      <p style="color:var(--muted);font-size:1.05rem;max-width:62ch">
-        Every Wednesday night from <strong style="color:var(--text)">6:30 pm</strong> the club runs structured fundamentals training across four pistol disciplines. Sessions are coached, beginner-friendly and capped at 8 shooters per discipline.
+      <p style="color:var(--muted);font-size:1.05rem;max-width:64ch">
+        Every Wednesday night the club runs coached fundamentals training across four pistol disciplines.
       </p>
+      <ul class="training-times">
+        <li><strong>10m Air Pistol</strong> · two sessions: <span class="t-time">6:30 – 7:25 pm</span> &amp; <span class="t-time">7:30 – 8:25 pm</span> · 5 slots each</li>
+        <li><strong>Rimfire · Centrefire · Service</strong> · <span class="t-time">6:30 – 9:00 pm</span> · 8 slots each</li>
+      </ul>
     </div>
     ${disciplineFilterTabs}
     ${rows.length === 0
@@ -188,9 +210,17 @@ router.get('/forms/training/book/:sessionId', (req, res) => {
     return res.send(renderFormShell('Session full', `<h1>This session is full</h1>
       <p>${esc(meta.label)} on ${esc(fmtSessionDate(s.session_date))} is at capacity. <a href="/forms/training">View other sessions</a>.</p>`));
   }
+  const slotSuffix = (s.discipline === 'air-pistol' && s.slot_index === 2) ? ' · Late slot' : (s.discipline === 'air-pistol' ? ' · Early slot' : '');
   res.send(renderFormShell(`Book ${meta.label}`, `
+    <div class="members-banner">
+      <span class="mb-icon">🔒</span>
+      <div>
+        <strong>MISC members only.</strong>
+        <span>Wednesday training sessions are reserved for current MISC members.</span>
+      </div>
+    </div>
     <div class="training-intro">
-      <span class="section-eyebrow gold-text">Booking · ${esc(meta.label)}</span>
+      <span class="section-eyebrow gold-text">Booking · ${esc(meta.label)}${esc(slotSuffix)}</span>
       <h1>${esc(fmtSessionDate(s.session_date))}</h1>
       <p style="color:var(--muted)"><strong style="color:var(--text)">${esc(s.start_time)} – ${esc(s.end_time)}</strong> · ${s.capacity - s.booked} of ${s.capacity} spots left</p>
     </div>

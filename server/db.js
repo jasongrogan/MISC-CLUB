@@ -13,6 +13,24 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+/* ── migration: training_sessions schema bump (add slot_index) ───────────
+   The original schema had UNIQUE(session_date, discipline) which prevented
+   us running TWO Air Pistol sessions on the same night. We now need
+   slot_index in the UNIQUE constraint. SQLite can't ALTER a UNIQUE
+   constraint in place — so if the old schema is detected and the table is
+   still empty / only auto-seeded, just drop the training tables and let the
+   schema recreate them below. No user bookings exist yet on this concept
+   site, so this is safe. ───────────────────────────────────────────────── */
+const _ts = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='training_sessions'").get();
+if (_ts) {
+  const cols = db.prepare("PRAGMA table_info(training_sessions)").all();
+  const hasSlotIndex = cols.some(c => c.name === 'slot_index');
+  if (!hasSlotIndex) {
+    console.log('[db] Migrating training_sessions to slot_index schema…');
+    db.exec(`DROP TABLE IF EXISTS training_bookings; DROP TABLE IF EXISTS training_sessions;`);
+  }
+}
+
 /* ── schema ─────────────────────────────────────────────── */
 db.exec(`
 CREATE TABLE IF NOT EXISTS settings (
@@ -104,18 +122,21 @@ CREATE TABLE IF NOT EXISTS range_bookings (
 );
 
 -- Wednesday-night training sessions: weekly recurring across 4 disciplines.
--- Sessions are seeded automatically (next ~12 Wednesdays × 4 disciplines).
+-- Air Pistol runs TWO sessions per Wednesday (6:30-7:25 and 7:30-8:25, 5 slots each).
+-- Other disciplines run ONE session per Wednesday (6:30-9:00, 8 slots).
+-- Sessions are seeded automatically by the seeder below.
 CREATE TABLE IF NOT EXISTS training_sessions (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   session_date TEXT NOT NULL,                     -- YYYY-MM-DD (a Wednesday)
   discipline   TEXT NOT NULL,                     -- 'air-pistol' | 'rimfire' | 'centrefire' | 'service'
+  slot_index   INTEGER NOT NULL DEFAULT 1,        -- 1 or 2 (air-pistol has two slots)
   start_time   TEXT NOT NULL DEFAULT '18:30',
   end_time     TEXT NOT NULL DEFAULT '21:00',
   capacity     INTEGER NOT NULL DEFAULT 8,
   is_open      INTEGER NOT NULL DEFAULT 1,
   notes        TEXT,
   created_at   DATETIME DEFAULT (datetime('now')),
-  UNIQUE(session_date, discipline)
+  UNIQUE(session_date, discipline, slot_index)
 );
 CREATE INDEX IF NOT EXISTS idx_training_sessions_date ON training_sessions(session_date);
 
@@ -174,10 +195,26 @@ const seed = db.transaction(() => {
 seed();
 
 /* ── training-session auto-seeder ────────────────────────────────────────
-   On every startup, ensure the next ~12 Wednesdays exist as sessions
-   across all 4 disciplines. Idempotent thanks to UNIQUE(session_date, discipline).
+   On every startup, ensure the next ~12 Wednesdays exist as sessions.
+
+   Air Pistol — TWO sessions per Wednesday, 5 slots each:
+     • slot 1:  6:30 pm – 7:25 pm
+     • slot 2:  7:30 pm – 8:25 pm
+   Rimfire / Centrefire / Service — ONE session per Wednesday, 8 slots:
+     • slot 1:  6:30 pm – 9:00 pm
+
+   Idempotent thanks to UNIQUE(session_date, discipline, slot_index).
    ──────────────────────────────────────────────────────────────────────── */
 const DISCIPLINES = ['air-pistol', 'rimfire', 'centrefire', 'service'];
+const DISCIPLINE_SLOTS = {
+  'air-pistol': [
+    { slot_index: 1, start_time: '18:30', end_time: '19:25', capacity: 5 },
+    { slot_index: 2, start_time: '19:30', end_time: '20:25', capacity: 5 },
+  ],
+  'rimfire':    [{ slot_index: 1, start_time: '18:30', end_time: '21:00', capacity: 8 }],
+  'centrefire': [{ slot_index: 1, start_time: '18:30', end_time: '21:00', capacity: 8 }],
+  'service':    [{ slot_index: 1, start_time: '18:30', end_time: '21:00', capacity: 8 }],
+};
 function nextWednesdays(count) {
   const out = [];
   const d = new Date();
@@ -193,17 +230,22 @@ function nextWednesdays(count) {
   return out;
 }
 const seedSession = db.prepare(`
-  INSERT INTO training_sessions (session_date, discipline, start_time, end_time, capacity)
-  VALUES (?, ?, '18:30', '21:00', 8)
-  ON CONFLICT(session_date, discipline) DO NOTHING
+  INSERT INTO training_sessions (session_date, discipline, slot_index, start_time, end_time, capacity)
+  VALUES (?, ?, ?, ?, ?, ?)
+  ON CONFLICT(session_date, discipline, slot_index) DO NOTHING
 `);
 const seedTraining = db.transaction(() => {
   const dates = nextWednesdays(12);
   for (const date of dates) {
-    for (const disc of DISCIPLINES) seedSession.run(date, disc);
+    for (const disc of DISCIPLINES) {
+      for (const slot of DISCIPLINE_SLOTS[disc]) {
+        seedSession.run(date, disc, slot.slot_index, slot.start_time, slot.end_time, slot.capacity);
+      }
+    }
   }
 });
 seedTraining();
 
 module.exports = db;
 module.exports.DISCIPLINES = DISCIPLINES;
+module.exports.DISCIPLINE_SLOTS = DISCIPLINE_SLOTS;
