@@ -446,14 +446,23 @@ router.get('/calendar', (req, res) => {
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDow    = (new Date(year, month-1, 1).getDay() + 6) % 7; // 0=Mon
   const todayDay    = now.getFullYear()===year && (now.getMonth()+1)===month ? now.getDate() : -1;
+  const isWeekend   = dow => dow === 5 || dow === 6; // Sat/Sun (Mon-indexed)
   let cells = '';
   for (let i = 0; i < firstDow; i++) cells += `<div class="cal-cell empty"></div>`;
   for (let d = 1; d <= daysInMonth; d++) {
     const dayEvs = evByDay[d] || [];
-    const dots   = dayEvs.map(ev =>
-      `<span class="cal-dot" style="background:${CAT_COLOR[ev.category]||CAT_COLOR.club}" title="${esc(ev.title)}"></span>`
-    ).join('');
-    cells += `<div class="cal-cell${d===todayDay?' today':''}"><span class="cal-num">${d}</span>${dots?`<div class="cal-dots">${dots}</div>`:''}</div>`;
+    const dow    = (firstDow + d - 1) % 7;
+    const chips  = dayEvs.map(ev => {
+      const col   = CAT_COLOR[ev.category] || CAT_COLOR.club;
+      const multi = ev.end_date && ev.end_date !== ev.event_date;
+      // Shorten title for the chip: strip "— Month" suffixes from championship names
+      const shortTitle = esc(ev.title).replace(/\s*[—–-]\s*(January|February|March|April|May|June|July|August|September|October|November|December)$/i, '');
+      return `<span class="cal-chip" style="--cat:${col}" title="${esc(ev.title)}">${multi?'↔ ':''}${shortTitle}</span>`;
+    }).join('');
+    cells += `<div class="cal-cell${d===todayDay?' today':''}${isWeekend(dow)?' weekend':''}">
+      <span class="cal-num">${d}</span>
+      ${chips ? `<div class="cal-chips">${chips}</div>` : ''}
+    </div>`;
   }
   const trail = (firstDow + daysInMonth) % 7;
   if (trail) for (let i = trail; i < 7; i++) cells += `<div class="cal-cell empty"></div>`;
