@@ -7,11 +7,16 @@
   <title>MISC — Melbourne International Shooting Club · Est. 1955</title>
   <link rel="icon" href="/images/MISC-Colour-6x-1-300x294.png"/>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="/css/styles.css?v=5"/>
+  <link rel="stylesheet" href="/css/styles.css?v=6"/>
   <!-- Preload the first hero frame so it paints before the slideshow starts cycling. -->
   <link rel="preload" as="image" href="/images/Sergei-RF-image.jpeg" fetchpriority="high"/>
 </head>
 <body class="home">
+
+<!-- ─── AFFILIATION STRIP ────────────────────────────── -->
+<div class="topstrip">
+  A private, members-only club &nbsp;·&nbsp; Port Melbourne, Victoria &nbsp;·&nbsp; Affiliated with <a href="https://www.vapa.org.au" target="_blank" rel="noopener">VAPA</a> &amp; <a href="https://www.trv.org.au" target="_blank" rel="noopener">TRV</a>
+</div>
 
 <!-- ─── TOP BAR ─────────────────────────────────────── -->
 <header class="topbar" id="topbar">
@@ -34,22 +39,25 @@
 
 <!-- ─── HERO ────────────────────────────────────────── -->
 <section class="hero">
-  <!-- Crossfading Ken-Burns hero slideshow — 4 frames, 28s cycle.
-       Frame order: Sergei RF (25m) · WA1500 revolver · Kodak B&W historic · Drone aerial.
+  <!-- Crossfading Ken-Burns hero slideshow — 6 frames, 42s cycle.
+       Frame order: Sergei RF · WA1500 · Kodak B&W · Drone aerial ·
+                    Woman air pistol B&W · SSP pistol close-up.
        Real <img> elements (not CSS backgrounds) so they're guaranteed to paint,
        are accessible to screen readers, and play nicely with browser caching. -->
   <div class="hero-bg">
-    <img class="hero-bg-frame" src="/images/Sergei-RF-image.jpeg"           alt="MISC Rapid Fire shooter on the 25m line"          fetchpriority="high"/>
-    <img class="hero-bg-frame" src="/images/WA1500-shooter.jpeg"            alt="WA1500 revolver shooter at MISC"                  loading="lazy"/>
-    <img class="hero-bg-frame" src="/images/kodak-shooting-photo.jpg"       alt="Historic MISC competition photo"                  loading="lazy"/>
-    <img class="hero-bg-frame" src="/images/drone-overhead-MISC-range.jpeg" alt="Aerial drone view of MISC range, Port Melbourne"  loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/Sergei-RF-image.jpeg"             alt="MISC Rapid Fire shooter on the 25m line"          fetchpriority="high"/>
+    <img class="hero-bg-frame" src="/images/WA1500-shooter.jpeg"              alt="WA1500 revolver shooter at MISC"                  loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/kodak-shooting-photo.jpg"         alt="Historic MISC competition photo"                  loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/drone-overhead-MISC-range.jpeg"   alt="Aerial drone view of MISC range, Port Melbourne"  loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/misc-woman-air-pistol-bw.jpg"     alt="Woman competitor shooting air pistol at MISC"     loading="lazy"/>
+    <img class="hero-bg-frame" src="/images/misc-ssp-pistol-close.jpg"        alt="Competitor with SSP pistol at MISC range"         loading="lazy"/>
   </div>
   <div class="hero-overlay"></div>
   <div class="hero-grain"></div>
 
   <!-- Progress indicators — small dots show which frame is active -->
   <div class="hero-dots" aria-hidden="true">
-    <span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span><span></span>
   </div>
 
   <div class="hero-content">
