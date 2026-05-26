@@ -1,0 +1,19 @@
+{
+  "name": "misc-club",
+  "version": "0.1.0",
+  "description": "MISC Club — concept site with content management and member forms",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "import": "node scripts/import-content.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "express": "^4.21.0",
+    "nodemailer": "^6.9.16"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
