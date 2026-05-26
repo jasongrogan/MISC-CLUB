@@ -104,11 +104,51 @@ const DISCIPLINE_META = {
   'centrefire': { label: 'Centrefire',       blurb: '25m programme · larger calibres · standard & rapid disciplines',  icon: '⌬' },
   'service':    { label: 'Service Range',    blurb: 'Fundamentals — Training Plan · Service Match · Unrestricted Service 25', icon: '▣' },
 };
+
+/* ── booking policy ─────────────────────────────────────────────────────
+   BOOKING_WINDOW_DAYS  — how far ahead a member may book (rolling).
+   MAX_ACTIVE_BOOKINGS  — cap on simultaneous confirmed bookings per email,
+                          so one member can't sweep every Wednesday slot.
+   Sessions beyond the window are still displayed as "Opens DD MMM" so
+   members see what's coming but can't grab a card until it's in range.
+   ──────────────────────────────────────────────────────────────────────── */
+const BOOKING_WINDOW_DAYS = 14;
+const MAX_ACTIVE_BOOKINGS = 4;
+
 function disciplineLabel(slug) { return DISCIPLINE_META[slug]?.label || slug; }
 function fmtSessionDate(iso) {
   if (!iso) return '';
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+}
+function fmtShortDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+}
+/** True if a session is currently bookable (date within rolling window). */
+function isInBookingWindow(sessionDate) {
+  if (!sessionDate) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const sd    = new Date(sessionDate + 'T00:00:00');
+  const days  = Math.floor((sd - today) / 86400000);
+  return days >= 0 && days <= BOOKING_WINDOW_DAYS;
+}
+/** Count active (future, confirmed) bookings for a member email. */
+function countActiveBookings(email) {
+  if (!email) return 0;
+  return db.prepare(`
+    SELECT COUNT(*) AS n FROM training_bookings b
+     JOIN training_sessions s ON s.id = b.session_id
+    WHERE LOWER(b.member_email) = LOWER(?) AND b.status = 'confirmed' AND s.session_date >= date('now')
+  `).get(String(email).trim()).n;
+}
+/** Date a preview session becomes bookable — i.e. session_date - BOOKING_WINDOW_DAYS. */
+function opensOn(sessionDate) {
+  if (!sessionDate) return '';
+  const d = new Date(sessionDate + 'T00:00:00');
+  d.setDate(d.getDate() - BOOKING_WINDOW_DAYS);
+  return d.toISOString().slice(0, 10);
 }
 
 router.get('/forms/training', (req, res) => {
@@ -145,9 +185,11 @@ router.get('/forms/training', (req, res) => {
     return `${h12}:${mm}${h >= 12 ? 'pm' : 'am'}`;
   };
 
-  const sessionList = Object.entries(byDate).map(([date, sessions]) => `
-    <div class="session-day">
-      <h3 class="session-date">${esc(fmtSessionDate(date))}</h3>
+  const sessionList = Object.entries(byDate).map(([date, sessions]) => {
+    const inWindow = isInBookingWindow(date);
+    return `
+    <div class="session-day ${inWindow ? '' : 'preview'}">
+      <h3 class="session-date">${esc(fmtSessionDate(date))}${inWindow ? '' : `<span class="opens-badge">Opens ${esc(fmtShortDate(opensOn(date)))}</span>`}</h3>
       <div class="session-grid">
         ${sessions.map(s => {
           const remaining = Math.max(0, s.capacity - s.booked);
@@ -155,8 +197,12 @@ router.get('/forms/training', (req, res) => {
           const meta = DISCIPLINE_META[s.discipline] || { label: s.discipline, blurb: '', icon: '•' };
           // Distinguish the two air-pistol time slots in the label
           const slotSuffix = (s.discipline === 'air-pistol' && s.slot_index === 2) ? ' · Late' : (s.discipline === 'air-pistol' ? ' · Early' : '');
+          let btn;
+          if (!inWindow)      btn = `<button class="btn-sess" disabled>Opens ${esc(fmtShortDate(opensOn(date)))}</button>`;
+          else if (isFull)    btn = '<button class="btn-sess" disabled>Session full</button>';
+          else                btn = `<a href="/forms/training/book/${s.id}" class="btn-sess">Book this session →</a>`;
           return `
-            <div class="session-card ${isFull ? 'full' : ''}">
+            <div class="session-card ${isFull ? 'full' : ''} ${inWindow ? '' : 'preview'}">
               <div class="session-icon">${meta.icon}</div>
               <div class="session-card-time">${esc(fmtTime(s.start_time))} – ${esc(fmtTime(s.end_time))}</div>
               <h4>${esc(meta.label)}${esc(slotSuffix)}</h4>
@@ -164,13 +210,12 @@ router.get('/forms/training', (req, res) => {
               <div class="session-meta">
                 <span class="cap-pill ${isFull?'cap-full':remaining<=2?'cap-low':'cap-ok'}">${isFull?'Full':`${remaining}/${s.capacity} spots`}</span>
               </div>
-              ${isFull
-                ? '<button class="btn-sess" disabled>Session full</button>'
-                : `<a href="/forms/training/book/${s.id}" class="btn-sess">Book this session →</a>`}
+              ${btn}
             </div>`;
         }).join('')}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   res.send(renderFormShell('Wednesday Training', `
     <div class="members-banner">
@@ -191,6 +236,10 @@ router.get('/forms/training', (req, res) => {
         <li><strong>Rimfire &amp; Centrefire</strong> · <span class="t-time">7:00 – 8:30 pm</span> · 8 slots each</li>
         <li><strong>Service Range</strong> — Fundamentals · Training Plan · <span class="t-time">7:30 – 9:00 pm</span> · 8 slots</li>
       </ul>
+      <div class="policy-note">
+        <span class="pn-icon">ⓘ</span>
+        <span>Bookings open <strong style="color:var(--text)">${BOOKING_WINDOW_DAYS} days</strong> ahead — sessions further out show as <em>Opens DD MMM</em> so you can plan ahead, but the slot frees up each week so everyone gets a fair go. Maximum <strong style="color:var(--text)">${MAX_ACTIVE_BOOKINGS}</strong> active bookings per member at a time.</span>
+      </div>
     </div>
     ${disciplineFilterTabs}
     ${rows.length === 0
@@ -207,6 +256,20 @@ router.get('/forms/training/book/:sessionId', (req, res) => {
   `).get(req.params.sessionId);
   if (!s) return res.status(404).send(renderFormShell('Not found', '<h1>Session not found</h1><p><a href="/forms/training">Back to sessions</a></p>'));
   const meta = DISCIPLINE_META[s.discipline] || { label: s.discipline };
+  // Window check — sessions outside the rolling booking window are preview-only
+  if (!isInBookingWindow(s.session_date)) {
+    return res.status(403).send(renderFormShell('Not yet bookable', `
+      <div class="members-banner">
+        <span class="mb-icon">🗓️</span>
+        <div>
+          <strong>Bookings open ${esc(fmtShortDate(opensOn(s.session_date)))}</strong>
+          <span>This session is more than ${BOOKING_WINDOW_DAYS} days away. Bookings open on a rolling ${BOOKING_WINDOW_DAYS}-day window so everyone gets a fair go.</span>
+        </div>
+      </div>
+      <h1>Not yet bookable</h1>
+      <p>${esc(meta.label)} on ${esc(fmtSessionDate(s.session_date))} opens for booking on <strong style="color:var(--gold)">${esc(fmtSessionDate(opensOn(s.session_date)))}</strong>.</p>
+      <p style="margin-top:20px"><a href="/forms/training" style="color:var(--gold)">← Back to sessions</a></p>`));
+  }
   if (s.booked >= s.capacity || !s.is_open) {
     return res.send(renderFormShell('Session full', `<h1>This session is full</h1>
       <p>${esc(meta.label)} on ${esc(fmtSessionDate(s.session_date))} is at capacity. <a href="/forms/training">View other sessions</a>.</p>`));
@@ -260,6 +323,10 @@ router.post('/forms/training/book/:sessionId', (req, res) => {
       FROM training_sessions s WHERE s.id = ?
   `).get(req.params.sessionId);
   if (!s) return res.status(404).send(renderFormShell('Not found', '<h1>Session not found</h1><p><a href="/forms/training">Back</a></p>'));
+  if (!isInBookingWindow(s.session_date)) {
+    return res.status(403).send(renderFormShell('Not yet bookable', `<h1>Bookings haven't opened for this session yet</h1>
+      <p>Bookings for this session open on <strong>${esc(fmtSessionDate(opensOn(s.session_date)))}</strong>. <a href="/forms/training">Back to sessions</a></p>`));
+  }
   if (s.booked >= s.capacity || !s.is_open) {
     return res.status(409).send(renderFormShell('Full', '<h1>Sorry — that session is now full</h1><p><a href="/forms/training">Pick another session</a></p>'));
   }
@@ -267,8 +334,24 @@ router.post('/forms/training/book/:sessionId', (req, res) => {
   if (!f.member_name || !f.member_email || !f.experience) {
     return res.status(400).send(renderFormShell('Missing fields', `<h1>Missing required fields</h1><p>Please fill in your name, email and experience level. <a href="/forms/training/book/${s.id}">Try again</a></p>`));
   }
+  // Per-member cap — don't let one member sweep every Wednesday slot
+  const memberEmail = String(f.member_email).trim();
+  const activeCount = countActiveBookings(memberEmail);
+  if (activeCount >= MAX_ACTIVE_BOOKINGS) {
+    return res.status(409).send(renderFormShell('Booking limit reached', `
+      <h1>You're at the booking limit</h1>
+      <p>You already have <strong>${activeCount}</strong> active training bookings. Members are limited to <strong>${MAX_ACTIVE_BOOKINGS}</strong> active bookings at a time so everyone gets a fair go on the line.</p>
+      <p style="margin-top:18px;color:var(--muted)">Once you attend (or cancel) one of your current bookings, you can book another. To cancel a booking, email <a href="mailto:miscevents@misc.org.au" style="color:var(--gold)">miscevents@misc.org.au</a>.</p>
+      <p style="margin-top:20px"><a href="/forms/training" style="color:var(--gold)">← Back to sessions</a></p>`));
+  }
+  // Prevent the same member double-booking the same session
+  const dupe = db.prepare(`SELECT id FROM training_bookings WHERE session_id = ? AND LOWER(member_email) = LOWER(?) AND status = 'confirmed'`).get(s.id, memberEmail);
+  if (dupe) {
+    return res.status(409).send(renderFormShell('Already booked', `<h1>You're already booked into this session</h1>
+      <p><a href="/forms/training" style="color:var(--gold)">View your other options</a></p>`));
+  }
   db.prepare(`INSERT INTO training_bookings (session_id, member_name, member_email, member_phone, member_number, experience, has_own_kit, notes) VALUES (?,?,?,?,?,?,?,?)`)
-    .run(s.id, String(f.member_name).trim(), String(f.member_email).trim(),
+    .run(s.id, String(f.member_name).trim(), memberEmail,
          f.member_phone || null, f.member_number || null, f.experience, f.has_own_kit ? 1 : 0, f.notes || null);
   const meta = DISCIPLINE_META[s.discipline] || { label: s.discipline };
   res.send(renderFormShell('Booking confirmed', `
