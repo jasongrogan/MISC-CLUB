@@ -211,9 +211,9 @@ const DISCIPLINE_SLOTS = {
     { slot_index: 1, start_time: '18:30', end_time: '19:25', capacity: 5 },
     { slot_index: 2, start_time: '19:30', end_time: '20:25', capacity: 5 },
   ],
-  'rimfire':    [{ slot_index: 1, start_time: '18:30', end_time: '21:00', capacity: 8 }],
-  'centrefire': [{ slot_index: 1, start_time: '18:30', end_time: '21:00', capacity: 8 }],
-  'service':    [{ slot_index: 1, start_time: '18:30', end_time: '21:00', capacity: 8 }],
+  'rimfire':    [{ slot_index: 1, start_time: '19:00', end_time: '20:30', capacity: 8 }],
+  'centrefire': [{ slot_index: 1, start_time: '19:00', end_time: '20:30', capacity: 8 }],
+  'service':    [{ slot_index: 1, start_time: '19:30', end_time: '21:00', capacity: 8 }],
 };
 function nextWednesdays(count) {
   const out = [];
@@ -245,6 +245,34 @@ const seedTraining = db.transaction(() => {
   }
 });
 seedTraining();
+
+/* ── time/capacity reconciliation ────────────────────────────────────────
+   Existing future rows may carry old times (e.g. 6:30 – 9:00 pm seeded
+   before the schedule was tuned). Bring them into line with DISCIPLINE_SLOTS
+   on every startup — but ONLY for future sessions that have no bookings yet,
+   so we never silently mutate a session a member has already booked into.
+   ──────────────────────────────────────────────────────────────────────── */
+const updateSlot = db.prepare(`
+  UPDATE training_sessions
+     SET start_time = ?, end_time = ?, capacity = ?
+   WHERE session_date >= date('now')
+     AND discipline = ? AND slot_index = ?
+     AND (start_time != ? OR end_time != ? OR capacity != ?)
+     AND id NOT IN (SELECT session_id FROM training_bookings WHERE status IN ('confirmed','attended'))
+`);
+const reconcile = db.transaction(() => {
+  for (const [disc, slots] of Object.entries(DISCIPLINE_SLOTS)) {
+    for (const slot of slots) {
+      const info = updateSlot.run(
+        slot.start_time, slot.end_time, slot.capacity,
+        disc, slot.slot_index,
+        slot.start_time, slot.end_time, slot.capacity,
+      );
+      if (info.changes > 0) console.log(`[db] Re-timed ${info.changes} future ${disc} slot-${slot.slot_index} sessions → ${slot.start_time}–${slot.end_time}, cap ${slot.capacity}`);
+    }
+  }
+});
+reconcile();
 
 module.exports = db;
 module.exports.DISCIPLINES = DISCIPLINES;

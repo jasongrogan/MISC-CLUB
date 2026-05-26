@@ -102,7 +102,7 @@ const DISCIPLINE_META = {
   'air-pistol': { label: '10m Air Pistol',  blurb: 'Olympic ISSF discipline · indoor air range · electronic targets',  icon: '⌖' },
   'rimfire':    { label: 'Rimfire (.22 LR)', blurb: '25m precision · ideal for new pistol shooters · borrow club kit', icon: '⌾' },
   'centrefire': { label: 'Centrefire',       blurb: '25m programme · larger calibres · standard & rapid disciplines',  icon: '⌬' },
-  'service':    { label: 'Service Range',    blurb: 'Service Match pistol · Unrestricted Service 25 · tactical',     icon: '▣' },
+  'service':    { label: 'Service Range',    blurb: 'Fundamentals — Training Plan · Service Match · Unrestricted Service 25', icon: '▣' },
 };
 function disciplineLabel(slug) { return DISCIPLINE_META[slug]?.label || slug; }
 function fmtSessionDate(iso) {
@@ -188,7 +188,8 @@ router.get('/forms/training', (req, res) => {
       </p>
       <ul class="training-times">
         <li><strong>10m Air Pistol</strong> · two sessions: <span class="t-time">6:30 – 7:25 pm</span> &amp; <span class="t-time">7:30 – 8:25 pm</span> · 5 slots each</li>
-        <li><strong>Rimfire · Centrefire · Service</strong> · <span class="t-time">6:30 – 9:00 pm</span> · 8 slots each</li>
+        <li><strong>Rimfire &amp; Centrefire</strong> · <span class="t-time">7:00 – 8:30 pm</span> · 8 slots each</li>
+        <li><strong>Service Range</strong> — Fundamentals · Training Plan · <span class="t-time">7:30 – 9:00 pm</span> · 8 slots</li>
       </ul>
     </div>
     ${disciplineFilterTabs}
