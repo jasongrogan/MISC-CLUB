@@ -61,11 +61,85 @@ button, input, textarea, select { font: inherit; color: inherit; }
 @media (max-width: 900px) { .topnav { display: none; } }
 
 /* ── HERO ───────────────────────────────────────────── */
-.hero { position: relative; min-height: 100vh; display: flex; align-items: center; padding: 80px var(--pad-x) 120px; overflow: hidden; }
-.hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.4) contrast(1.05) saturate(0.85); transform: scale(1.05); animation: heroZoom 18s ease-out infinite alternate; }
-.hero-overlay { position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 50%, rgba(10,10,10,.4), rgba(10,10,10,.92) 70%), linear-gradient(180deg, rgba(10,10,10,.4) 0%, rgba(10,10,10,.85) 100%); }
-.hero-grain { position: absolute; inset: 0; opacity: 0.08; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); pointer-events: none; }
-@keyframes heroZoom { from { transform: scale(1.05); } to { transform: scale(1.15); } }
+.hero { position: relative; min-height: 100vh; display: flex; align-items: center; padding: 80px var(--pad-x) 120px; overflow: hidden; isolation: isolate; }
+
+/* ── Crossfading Ken-Burns slideshow ─────────────────────────────────────
+   6 frames × 7s visible each + 1s crossfade = 42s full cycle.
+   Each frame slowly zooms (Ken Burns) while visible, then crossfades to the
+   next. Reduced-motion users see only frame 1 with no animation.
+   ──────────────────────────────────────────────────────────────────────── */
+.hero-bg { position: absolute; inset: 0; z-index: 0; }
+.hero-bg-frame {
+  position: absolute; inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.4) contrast(1.05) saturate(0.9);
+  opacity: 0;
+  transform: scale(1.05);
+  will-change: opacity, transform;
+  animation: heroCrossfade 42s infinite cubic-bezier(.4,0,.2,1), heroKenBurns 42s infinite linear;
+}
+/* Frame 1 needs its OWN crossfade so it's visible at page load (no blank intro).
+   It fades back in during 95-100% so the cycle loops continuously. */
+.hero-bg-frame:nth-child(1) {
+  animation: heroCrossfadeFirst 42s infinite cubic-bezier(.4,0,.2,1), heroKenBurns 42s infinite linear;
+  animation-delay: 0s, 0s;
+}
+.hero-bg-frame:nth-child(2) { animation-delay:  7s,  7s; }
+.hero-bg-frame:nth-child(3) { animation-delay: 14s, 14s; }
+.hero-bg-frame:nth-child(4) { animation-delay: 21s, 21s; }
+.hero-bg-frame:nth-child(5) { animation-delay: 28s, 28s; }
+.hero-bg-frame:nth-child(6) { animation-delay: 35s, 35s; }
+
+/* Frames 2-6: invisible at start of cycle, fade in, hold, fade out */
+@keyframes heroCrossfade {
+  0%   { opacity: 0; }
+  3%   { opacity: 1; }   /* fade in over ~1.2s */
+  16%  { opacity: 1; }   /* hold ~5.5s */
+  19%  { opacity: 0; }   /* fade out over ~1.2s */
+  100% { opacity: 0; }
+}
+/* Frame 1: visible at start, fades out at 17%, fades back in at end for the loop */
+@keyframes heroCrossfadeFirst {
+  0%    { opacity: 1; }
+  14%   { opacity: 1; }
+  17%   { opacity: 0; }
+  97%   { opacity: 0; }
+  100%  { opacity: 1; }
+}
+/* Subtle zoom while frame is on screen — gives the still photos motion */
+@keyframes heroKenBurns {
+  0%   { transform: scale(1.05); }
+  19%  { transform: scale(1.18); }
+  100% { transform: scale(1.18); }
+}
+
+.hero-overlay { position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at 30% 50%, rgba(10,10,10,.35), rgba(10,10,10,.92) 70%), linear-gradient(180deg, rgba(10,10,10,.45) 0%, rgba(10,10,10,.88) 100%); }
+.hero-grain { position: absolute; inset: 0; z-index: 1; opacity: 0.08; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); pointer-events: none; }
+
+/* ── Progress dots (which slide is active) ──────────────────────────── */
+.hero-dots { position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; gap: 8px; }
+.hero-dots span { width: 28px; height: 2px; background: rgba(255,255,255,.18); border-radius: 1px; overflow: hidden; position: relative; }
+.hero-dots span::after { content: ''; position: absolute; inset: 0; background: var(--gold); transform: translateX(-100%); animation: dotFill 42s linear infinite; }
+.hero-dots span:nth-child(1)::after { animation-delay:  0s; }
+.hero-dots span:nth-child(2)::after { animation-delay:  7s; }
+.hero-dots span:nth-child(3)::after { animation-delay: 14s; }
+.hero-dots span:nth-child(4)::after { animation-delay: 21s; }
+.hero-dots span:nth-child(5)::after { animation-delay: 28s; }
+.hero-dots span:nth-child(6)::after { animation-delay: 35s; }
+@keyframes dotFill {
+  0%   { transform: translateX(-100%); }
+  16%  { transform: translateX(0%); }
+  17%, 100% { transform: translateX(100%); }
+}
+@media (max-width: 640px) { .hero-dots { bottom: 96px; } .hero-dots span { width: 18px; } }
+
+/* Reduced motion: show only frame 1, no animation, no Ken Burns */
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg-frame { animation: none; transform: none; }
+  .hero-bg-frame:nth-child(1) { opacity: 1; }
+  .hero-dots { display: none; }
+}
 
 .hero-content { position: relative; z-index: 2; max-width: var(--max-w); margin: 0 auto; width: 100%; }
 .hero-eyebrow { display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px; background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.3); border-radius: 100px; color: var(--gold-2); font-size: 0.78rem; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; margin-bottom: 28px; }

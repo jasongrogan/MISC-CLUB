@@ -8,6 +8,8 @@
   <link rel="icon" href="/images/MISC-Colour-6x-1-300x294.png"/>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/css/styles.css"/>
+  <!-- Preload the first hero frame so it paints before the slideshow starts cycling. -->
+  <link rel="preload" as="image" href="/images/Sergei-RF-image.jpeg" fetchpriority="high"/>
 </head>
 <body class="home">
 
@@ -30,9 +32,24 @@
 
 <!-- ─── HERO ────────────────────────────────────────── -->
 <section class="hero">
-  <div class="hero-bg" style="background-image:url('/images/drone-overhead-MISC-range.jpeg')"></div>
+  <!-- Crossfading Ken-Burns hero slideshow — 6 frames from misc.org.au's homepage rotation.
+       Each frame is a real MISC member action shot (per landing-page-design skill:
+       avoid generic stock; show the actual product/people). -->
+  <div class="hero-bg">
+    <div class="hero-bg-frame" style="background-image:url('/images/Sergei-RF-image.jpeg')"></div>
+    <div class="hero-bg-frame" style="background-image:url('/images/R-Motton-prone-Serv25.jpg')"></div>
+    <div class="hero-bg-frame" style="background-image:url('/images/WA1500-shooter.jpeg')"></div>
+    <div class="hero-bg-frame" style="background-image:url('/images/CAS-action-shot-1024x683.jpeg')"></div>
+    <div class="hero-bg-frame" style="background-image:url('/images/Combined-Service-shooters.jpeg')"></div>
+    <div class="hero-bg-frame" style="background-image:url('/images/kodak-shooting-photo.jpg')"></div>
+  </div>
   <div class="hero-overlay"></div>
   <div class="hero-grain"></div>
+
+  <!-- Progress indicators — small dots show which frame is active -->
+  <div class="hero-dots" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
 
   <div class="hero-content">
     <div class="hero-eyebrow reveal">
