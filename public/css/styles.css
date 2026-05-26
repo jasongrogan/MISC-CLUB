@@ -74,7 +74,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
   width: 100%; height: 100%;
   object-fit: cover;
   object-position: center;
-  filter: brightness(0.45) contrast(1.05) saturate(0.95);
+  /* Lighter treatment so photos read clearly; overlay handles text contrast. */
+  filter: contrast(1.05) saturate(1.05);
   opacity: 0;
   transform: scale(1.05);
   will-change: opacity, transform;
@@ -115,7 +116,10 @@ button, input, textarea, select { font: inherit; color: inherit; }
   100% { transform: scale(1.18); }
 }
 
-.hero-overlay { position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at 30% 50%, rgba(10,10,10,.35), rgba(10,10,10,.92) 70%), linear-gradient(180deg, rgba(10,10,10,.45) 0%, rgba(10,10,10,.88) 100%); }
+/* Overlay: dark only enough to keep the headline + sub-text readable.
+   Heavier shadow at the top-left (where the text sits) via radial gradient;
+   bottom is gradient that fades the image into the section below.   */
+.hero-overlay { position: absolute; inset: 0; z-index: 1; background: linear-gradient(105deg, rgba(10,10,10,.78) 0%, rgba(10,10,10,.45) 45%, rgba(10,10,10,.25) 75%, rgba(10,10,10,.55) 100%), linear-gradient(180deg, rgba(10,10,10,0) 60%, rgba(10,10,10,.7) 100%); }
 .hero-grain { position: absolute; inset: 0; z-index: 1; opacity: 0.08; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); pointer-events: none; }
 
 /* ── Progress dots (which slide is active) ──────────────────────────── */
