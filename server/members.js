@@ -36,7 +36,7 @@ function shell(title, body, opts = {}) {
 <title>${esc(title)} — MISC Members</title>
 <link rel="icon" href="/images/MISC-Colour-6x-1-300x294.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/styles.css?v=9"/></head>
+<link rel="stylesheet" href="/css/styles.css?v=10"/></head>
 <body class="members-page">
 <div class="topstrip">A private, members-only club &nbsp;·&nbsp; Port Melbourne, Victoria &nbsp;·&nbsp; Affiliated with <a href="https://www.vapa.org.au" target="_blank" rel="noopener">VAPA</a> &amp; <a href="https://www.trv.org.au" target="_blank" rel="noopener">TRV</a></div>
 <header class="topbar scrolled" id="topbar">
@@ -312,12 +312,39 @@ router.post('/profile', (req, res) => {
 /* ── SCORES ──────────────────────────────────────────────── */
 router.get('/scores', (req, res) => {
   const m = req.member;
+  const typeFilter = String(req.query.type || 'all').toLowerCase();
   const scores = db.prepare(`SELECT * FROM member_scores WHERE member_id = ? ORDER BY match_date DESC, id DESC`).all(m.id);
   const compScores = scores.filter(s => s.is_comp);
+  const practiceScores = scores.filter(s => !s.is_comp);
   const best   = compScores.length ? Math.max(...compScores.map(s => s.score)) : null;
   const avg    = compScores.length ? Math.round(compScores.reduce((a, s) => a + s.score, 0) / compScores.length) : null;
   const synced = req.query.synced ? `<div class="flash-ok">Scores re-synced from Sight Picture: ${esc(req.query.synced)} records.</div>` : '';
   const failed = req.query.failed ? `<div class="flash-warn">Sync failed: ${esc(req.query.failed)}</div>` : '';
+
+  /* ── Aggregations: Year × Competition Type, mirrors the Sight Picture
+       `member_scores` summary (by_year, by_completion_type, by_competition). */
+  const yearAgg = {};      // { '2025': { total, comp, practice, best, sum, byMatch: {name:{count,comp,practice,best,sum}} } }
+  for (const s of scores) {
+    const year = (s.match_date || '').slice(0, 4) || 'Unknown';
+    const name = s.match_name || 'Other';
+    const y = yearAgg[year] = yearAgg[year] || { total: 0, comp: 0, practice: 0, best: null, sum: 0, byMatch: {} };
+    y.total++;
+    if (s.is_comp) y.comp++; else y.practice++;
+    if (s.is_comp) {
+      y.sum += s.score;
+      if (y.best === null || s.score > y.best) y.best = s.score;
+    }
+    const mm = y.byMatch[name] = y.byMatch[name] || { count: 0, comp: 0, practice: 0, best: null, sum: 0 };
+    mm.count++;
+    if (s.is_comp) { mm.comp++; mm.sum += s.score; if (mm.best === null || s.score > mm.best) mm.best = s.score; }
+    else mm.practice++;
+  }
+  const yearKeys = Object.keys(yearAgg).sort().reverse();
+
+  // Filtered scores for the table (Competition / Practice / All)
+  const filteredScores = typeFilter === 'comp' ? compScores
+                      : typeFilter === 'practice' ? practiceScores
+                      : scores;
 
   // Chart-friendly time series (oldest→newest)
   const series = [...compScores].reverse().map(s => ({ d: s.match_date, y: s.score, n: s.match_name }));
@@ -333,21 +360,70 @@ router.get('/scores', (req, res) => {
 
       <div class="score-stats">
         <div><strong>${compScores.length}</strong><span>Competition shoots</span></div>
+        <div><strong>${practiceScores.length}</strong><span>Practice shoots</span></div>
         <div><strong>${best ?? '—'}</strong><span>Best score</span></div>
-        <div><strong>${avg ?? '—'}</strong><span>Average</span></div>
+        <div><strong>${avg ?? '—'}</strong><span>Comp average</span></div>
       </div>
+
+      ${yearKeys.length ? `
+      <h3 class="members-section-h">Breakdown by year &amp; competition</h3>
+      <div class="year-breakdown">
+        ${yearKeys.map(yr => {
+          const y = yearAgg[yr];
+          const yAvg = y.comp ? Math.round(y.sum / y.comp) : null;
+          const matches = Object.entries(y.byMatch).sort((a,b) => b[1].count - a[1].count);
+          return `<div class="year-card">
+            <div class="year-card-head">
+              <h4>${esc(yr)}</h4>
+              <div class="year-card-stats">
+                <span><strong>${y.total}</strong><em>Total</em></span>
+                <span><strong style="color:var(--gold)">${y.comp}</strong><em>Comp</em></span>
+                <span><strong style="color:var(--muted)">${y.practice}</strong><em>Practice</em></span>
+                <span><strong>${y.best ?? '—'}</strong><em>Best</em></span>
+                <span><strong>${yAvg ?? '—'}</strong><em>Avg</em></span>
+              </div>
+            </div>
+            ${matches.length ? `
+            <table class="year-match-table">
+              <thead><tr><th>Competition</th><th>Total</th><th>Comp</th><th>Practice</th><th>Best</th><th>Avg</th></tr></thead>
+              <tbody>
+                ${matches.map(([name, mm]) => {
+                  const mAvg = mm.comp ? Math.round(mm.sum / mm.comp) : null;
+                  return `<tr>
+                    <td>${esc(name)}</td>
+                    <td>${mm.count}</td>
+                    <td><span class="pill pill-comp">${mm.comp}</span></td>
+                    <td><span class="pill pill-practice">${mm.practice}</span></td>
+                    <td>${mm.best ?? '—'}</td>
+                    <td>${mAvg ?? '—'}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>` : '<p style="color:var(--dim);padding:14px 18px">No matches recorded.</p>'}
+          </div>`;
+        }).join('')}
+      </div>
+      ` : ''}
 
       ${series.length > 1 ? `<div class="score-chart-wrap"><canvas id="score-chart" height="220"></canvas></div>` : ''}
 
-      <div class="members-actions" style="margin: 24px 0 40px">
+      <div class="members-actions" style="margin: 24px 0 32px">
         <form method="POST" action="/members/scores/sync" style="display:inline"><button class="btn btn-gold" type="submit">↻ Re-sync from Sight Picture</button></form>
       </div>
 
       ${scores.length ? `
+        <h3 class="members-section-h" style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+          <span>All ${filteredScores.length} score${filteredScores.length===1?'':'s'}${typeFilter!=='all'?` <small style="font-weight:400;color:var(--dim);font-size:0.78rem;letter-spacing:0.1em">(${typeFilter==='comp'?'Competition only':'Practice only'})</small>`:''}</span>
+          <span class="type-filter">
+            <a href="/members/scores?type=all"      class="${typeFilter==='all'?'active':''}">All</a>
+            <a href="/members/scores?type=comp"     class="${typeFilter==='comp'?'active':''}">Competition</a>
+            <a href="/members/scores?type=practice" class="${typeFilter==='practice'?'active':''}">Practice</a>
+          </span>
+        </h3>
         <table class="data-table scores-table">
           <thead><tr><th>Date</th><th>Match</th><th>Class</th><th>Calibre</th><th>Grade</th><th>Score</th><th>Type</th></tr></thead>
           <tbody>
-            ${scores.map(s => `<tr>
+            ${filteredScores.map(s => `<tr>
               <td>${esc(fmtDate(s.match_date))}</td>
               <td>${esc(s.match_name||'')}</td>
               <td>${esc(s.firearm_class||'')}${s.sub_class?` <small style="color:var(--dim)">${esc(s.sub_class)}</small>`:''}</td>
@@ -355,7 +431,7 @@ router.get('/scores', (req, res) => {
               <td>${esc(s.grade||'')}</td>
               <td><strong>${s.score}</strong></td>
               <td><small style="color:${s.is_comp?'var(--gold)':'var(--dim)'}">${s.is_comp?'COMP':'practice'}</small></td>
-            </tr>`).join('')}
+            </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">No scores match this filter.</td></tr>'}
           </tbody>
         </table>
       ` : `<div class="empty-state">

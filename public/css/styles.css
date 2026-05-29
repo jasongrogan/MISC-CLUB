@@ -304,13 +304,43 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .form-actions { display: flex; gap: 12px; margin-top: 20px; }
 
 /* Scores page */
-.score-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+.score-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+@media (max-width: 700px) { .score-stats { grid-template-columns: repeat(2, 1fr); } }
 .score-stats > div { padding: 22px 24px; background: var(--char); border: 1px solid var(--line); border-radius: 4px; }
-.score-stats strong { display: block; font-family: var(--display); font-size: 2.4rem; font-weight: 900; color: var(--gold); line-height: 1; }
-.score-stats span { display: block; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.16em; text-transform: uppercase; margin-top: 6px; }
+.score-stats strong { display: block; font-family: var(--display); font-size: 2.2rem; font-weight: 900; color: var(--gold); line-height: 1; }
+.score-stats span { display: block; font-size: 0.74rem; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 6px; }
 .score-chart-wrap { padding: 20px 24px; background: var(--char); border: 1px solid var(--line); border-radius: 4px; margin-bottom: 24px; height: 260px; }
 .scores-table { font-size: 0.9rem; }
 .scores-table th { font-family: var(--display); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--muted); text-transform: uppercase; }
+
+/* Year × Competition breakdown */
+.year-breakdown { display: flex; flex-direction: column; gap: 18px; margin-bottom: 32px; }
+.year-card { background: var(--char); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.year-card-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 22px 26px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(201,168,76,.04), transparent); }
+.year-card-head h4 { font-family: var(--display); font-size: 2.4rem; font-weight: 900; color: var(--gold); letter-spacing: -0.01em; line-height: 1; }
+.year-card-stats { display: flex; gap: 22px; flex-wrap: wrap; }
+.year-card-stats span { display: flex; flex-direction: column; align-items: flex-start; }
+.year-card-stats strong { font-family: var(--display); font-size: 1.5rem; font-weight: 800; color: var(--text); line-height: 1; }
+.year-card-stats em { font-style: normal; font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.year-match-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.year-match-table thead th { padding: 12px 18px; background: var(--ink); font-family: var(--display); font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); font-weight: 700; text-align: left; border-bottom: 1px solid var(--line); }
+.year-match-table tbody td { padding: 14px 18px; border-bottom: 1px solid var(--line); color: var(--text); }
+.year-match-table tbody tr:last-child td { border-bottom: 0; }
+.year-match-table tbody tr:hover { background: rgba(255,255,255,.02); }
+.year-match-table td:first-child { font-weight: 600; }
+.year-match-table td:nth-child(n+2) { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Pill counters used in breakdown table */
+.pill { display: inline-block; min-width: 28px; padding: 2px 8px; border-radius: 100px; font-size: 0.78rem; font-weight: 700; text-align: center; letter-spacing: 0.04em; }
+.pill-comp     { background: rgba(201,168,76,.18); color: var(--gold); }
+.pill-practice { background: rgba(154,154,154,.12); color: var(--muted); }
+
+/* Comp / Practice / All filter tabs */
+.type-filter { display: inline-flex; gap: 0; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.type-filter a { padding: 6px 14px; font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; border-right: 1px solid var(--line); transition: background .2s, color .2s; }
+.type-filter a:last-child { border-right: 0; }
+.type-filter a:hover { color: var(--gold); }
+.type-filter a.active { background: var(--gold); color: #111; }
 
 /* Documents */
 .doc-section { margin-bottom: 36px; }
