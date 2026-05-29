@@ -7,6 +7,7 @@ const Database = require('better-sqlite3');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 fs.mkdirSync(DATA_DIR, { recursive: true });
+fs.mkdirSync(path.join(DATA_DIR, 'documents'), { recursive: true });
 const DB_PATH = path.join(DATA_DIR, 'misc-club.sqlite');
 
 const db = new Database(DB_PATH);
@@ -170,6 +171,82 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
   created_at     DATETIME DEFAULT (datetime('now'))
 );
 
+-- Members directory — synced from Sight Picture + local-only profile fields
+CREATE TABLE IF NOT EXISTS members (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  member_number        TEXT UNIQUE NOT NULL,             -- Sight Picture memberId, e.g. "1530"
+  first_name           TEXT,
+  last_name            TEXT,
+  display_name         TEXT NOT NULL,                    -- raw name from SP, e.g. "PETER KELLY"
+  email                TEXT,
+  -- Sight Picture cross-ref
+  sp_user_id           TEXT,                             -- userId, e.g. "Mship1530"
+  sp_access_roles      TEXT,                             -- JSON: ["Shooter","Trainer"]
+  sp_synced_at         DATETIME,
+  -- Local-only profile fields (members edit these themselves)
+  vapa_id              TEXT,
+  trv_id               TEXT,
+  pistol_licence       TEXT,                             -- handgun licence # ("H" licences)
+  pistol_licence_expiry TEXT,                            -- YYYY-MM-DD
+  rifle_licence        TEXT,                             -- long-arm licence #
+  rifle_licence_expiry TEXT,                             -- YYYY-MM-DD
+  -- Auth
+  password_hash        TEXT,
+  password_salt        TEXT,
+  must_change_password INTEGER NOT NULL DEFAULT 1,
+  last_login           DATETIME,
+  is_active            INTEGER NOT NULL DEFAULT 1,
+  created_at           DATETIME DEFAULT (datetime('now')),
+  updated_at           DATETIME DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_members_email ON members(email);
+
+-- Cached competition scores pulled from Sight Picture
+CREATE TABLE IF NOT EXISTS member_scores (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  member_id     INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  match_id      TEXT NOT NULL,                           -- composite matchDetails string
+  match_name    TEXT,                                    -- "Combined Services"
+  match_date    TEXT,                                    -- YYYY-MM-DD extracted from matchDetails
+  detail        TEXT,                                    -- detail number
+  firearm_class TEXT,
+  sub_class     TEXT,
+  calibre       TEXT,
+  grade         TEXT,
+  range_name    TEXT,
+  is_comp       INTEGER NOT NULL DEFAULT 1,              -- competition vs practice
+  score         INTEGER NOT NULL,
+  synced_at     DATETIME DEFAULT (datetime('now')),
+  UNIQUE(member_id, match_id)
+);
+CREATE INDEX IF NOT EXISTS idx_member_scores_date ON member_scores(member_id, match_date DESC);
+
+-- Member login sessions (DB-backed so restarts don't kick everyone out)
+CREATE TABLE IF NOT EXISTS member_sessions (
+  token       TEXT PRIMARY KEY,
+  member_id   INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  expires_at  DATETIME NOT NULL,
+  created_at  DATETIME DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_member_sessions_member ON member_sessions(member_id);
+
+-- Documents library — members-only (bylaws, minutes, policies, forms)
+CREATE TABLE IF NOT EXISTS documents (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  title           TEXT NOT NULL,
+  slug            TEXT UNIQUE NOT NULL,
+  category        TEXT NOT NULL,                         -- bylaws | minutes | policies | forms | annual-reports
+  description     TEXT,
+  file_path       TEXT,                                  -- relative under data/documents/
+  file_name       TEXT,                                  -- original filename for download
+  mime_type       TEXT,
+  size_bytes      INTEGER,
+  is_members_only INTEGER NOT NULL DEFAULT 1,
+  uploaded_at     DATETIME DEFAULT (datetime('now')),
+  uploaded_by     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category);
+
 -- Club calendar events — managed via admin, displayed on /calendar
 CREATE TABLE IF NOT EXISTS events (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -205,6 +282,12 @@ const settingsDefaults = {
   SMTP_PASS:        '',
   EMAIL_FROM_NAME:  'MISC Club',
   EMAIL_ENABLED:    '0',
+  // Sight Picture API (M2M OAuth client-credentials flow)
+  SP_CLIENT_ID:     '22c5h867g7qlh4eesqjpb4dovj',
+  SP_CLIENT_SECRET: 'a30eo314ebrgab4pdvmm3v2nqkrgc26qesr2j7onfl9159dvddk',
+  SP_API_URL:       'https://rwwejhz1i8.execute-api.ap-southeast-2.amazonaws.com',
+  SP_AUTH_URL:      'https://shootscore.auth.ap-southeast-2.amazoncognito.com/oauth2/token',
+  SP_CLUB_ID:       'MISC',
 };
 const setSetting = db.prepare(`INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING`);
 const seed = db.transaction(() => {

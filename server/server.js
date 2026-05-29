@@ -6,6 +6,7 @@ const express = require('express');
 const db      = require('./db');
 const api     = require('./api');
 const admin   = require('./admin');
+const members = require('./members');
 
 const app  = express();
 const PORT = process.env.PORT || 3100;
@@ -21,6 +22,9 @@ app.use(express.static(path.join(__dirname, '..', 'public'), { extensions: ['htm
 // Forms (GET form pages + POST submissions) — mounted at root since paths
 // already include /forms/ prefix in the router.
 app.use('/', api);
+
+// Members area (auth-gated portal)
+app.use('/members', members);
 
 // Admin (HTML + JSON API)
 app.use('/admin', admin);

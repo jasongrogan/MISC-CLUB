@@ -244,6 +244,89 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .join-card h4 { font-family: var(--display); font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 4px; }
 .join-card p { color: var(--muted); font-size: 0.88rem; }
 
+/* ── Members portal ─────────────────────────────────── */
+.members-page { background: var(--jet); }
+.members-main { padding: 60px 0 0; }
+.members-page .topnav a.active { color: var(--gold); }
+
+/* Login / change-password card */
+.auth-container { display: flex; justify-content: center; padding: 40px 0 80px; }
+.auth-card { max-width: 480px; width: 100%; padding: 40px 36px; background: var(--char); border: 1px solid var(--line); border-radius: 6px; }
+.auth-title { font-family: var(--display); font-weight: 900; font-size: clamp(2rem, 4vw, 2.6rem); line-height: 1; text-transform: uppercase; letter-spacing: -0.01em; margin: 10px 0 14px; }
+.auth-sub { color: var(--muted); font-size: 0.94rem; line-height: 1.6; margin-bottom: 24px; }
+.auth-sub code { background: var(--ink); padding: 1px 6px; border-radius: 2px; color: var(--gold); font-size: 0.85rem; }
+.auth-form label { display: block; margin-bottom: 14px; font-size: 0.82rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.auth-form input { display: block; width: 100%; margin-top: 6px; padding: 12px 14px; background: var(--ink); border: 1px solid var(--line); color: var(--text); border-radius: 3px; font-size: 1rem; }
+.auth-form input:focus { outline: none; border-color: var(--gold); }
+.auth-form button { width: 100%; margin-top: 12px; }
+.auth-err { background: rgba(200,16,46,.12); border: 1px solid rgba(200,16,46,.35); padding: 10px 14px; color: #ff8b95; border-radius: 3px; margin-bottom: 18px; font-size: 0.9rem; }
+.auth-help { font-size: 0.82rem; color: var(--dim); margin-top: 18px; line-height: 1.5; }
+.auth-help a { color: var(--gold); }
+
+/* Members hero / page intros */
+.members-hero { padding: 30px 0 24px; border-bottom: 1px solid var(--line); margin-bottom: 32px; }
+.members-hero h1 { font-family: var(--display); font-size: clamp(2.2rem, 5vw, 3.6rem); font-weight: 900; line-height: 1; letter-spacing: -0.01em; text-transform: uppercase; margin: 8px 0; }
+.members-hero-sub { color: var(--muted); font-size: 1rem; }
+
+/* Dashboard tiles */
+.members-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-bottom: 40px; }
+.members-tile { display: block; padding: 26px 28px; background: var(--char); border: 1px solid var(--line); border-radius: 4px; transition: border-color .3s, transform .3s; }
+.members-tile:hover { border-color: var(--gold); transform: translateY(-4px); }
+.tile-eyebrow { font-family: var(--display); font-size: 0.72rem; letter-spacing: 0.2em; color: var(--gold); font-weight: 700; text-transform: uppercase; }
+.members-tile h3 { font-family: var(--display); font-size: 1.7rem; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; margin: 8px 0 6px; line-height: 1.1; }
+.members-tile h3 small { font-size: 0.7rem; color: var(--muted); font-weight: 600; letter-spacing: 0.16em; display: block; margin-top: 2px; }
+.members-tile p { color: var(--muted); font-size: 0.92rem; line-height: 1.5; margin-bottom: 14px; }
+.tile-arrow { color: var(--gold); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+
+.members-section-h { font-family: var(--display); font-size: 0.95rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.members-latest { display: flex; align-items: center; gap: 32px; padding: 28px 32px; background: var(--char); border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: 4px; margin-bottom: 16px; }
+.latest-score { font-family: var(--display); font-size: 3.4rem; font-weight: 900; color: var(--gold); line-height: 1; min-width: 100px; text-align: center; }
+.latest-body h4 { font-family: var(--display); font-size: 1.4rem; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 4px; }
+.latest-body p { color: var(--muted); font-size: 0.92rem; }
+.members-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* Flash messages */
+.flash-ok   { background: rgba(90,171,106,.12); border: 1px solid rgba(90,171,106,.4); color: #82d990; padding: 12px 16px; border-radius: 3px; margin-bottom: 24px; }
+.flash-warn { background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.4); color: var(--gold-2); padding: 12px 16px; border-radius: 3px; margin-bottom: 24px; }
+.flash-warn a, .flash-ok a { color: inherit; text-decoration: underline; }
+
+/* Profile form */
+.profile-form { max-width: 760px; }
+.profile-section { border: 1px solid var(--line); border-radius: 4px; padding: 20px 26px 8px; margin-bottom: 20px; background: var(--char); }
+.profile-section legend { font-family: var(--display); font-size: 0.78rem; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; font-weight: 700; padding: 0 8px; }
+.profile-section label { display: block; margin-bottom: 14px; font-size: 0.82rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.profile-section input, .profile-section select { display: block; width: 100%; margin-top: 6px; padding: 10px 12px; background: var(--ink); border: 1px solid var(--line); color: var(--text); border-radius: 3px; font-size: 0.95rem; }
+.profile-section input:focus { outline: none; border-color: var(--gold); }
+.profile-section input:disabled { color: var(--dim); cursor: not-allowed; }
+.profile-section .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 600px) { .profile-section .row { grid-template-columns: 1fr; } }
+.profile-help { color: var(--dim); font-size: 0.82rem; padding: 0 8px 8px; }
+.form-actions { display: flex; gap: 12px; margin-top: 20px; }
+
+/* Scores page */
+.score-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+.score-stats > div { padding: 22px 24px; background: var(--char); border: 1px solid var(--line); border-radius: 4px; }
+.score-stats strong { display: block; font-family: var(--display); font-size: 2.4rem; font-weight: 900; color: var(--gold); line-height: 1; }
+.score-stats span { display: block; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.16em; text-transform: uppercase; margin-top: 6px; }
+.score-chart-wrap { padding: 20px 24px; background: var(--char); border: 1px solid var(--line); border-radius: 4px; margin-bottom: 24px; height: 260px; }
+.scores-table { font-size: 0.9rem; }
+.scores-table th { font-family: var(--display); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--muted); text-transform: uppercase; }
+
+/* Documents */
+.doc-section { margin-bottom: 36px; }
+.doc-section h3 { font-family: var(--display); font-size: 0.95rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.doc-section h3 small { color: var(--dim); font-weight: 400; letter-spacing: 0.1em; font-size: 0.7rem; }
+.doc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.doc-card { display: block; padding: 22px 24px; background: var(--char); border: 1px solid var(--line); border-radius: 4px; transition: border-color .25s, transform .25s; }
+.doc-card:hover { border-color: var(--gold); transform: translateY(-3px); }
+.doc-icon { font-size: 1.6rem; }
+.doc-card h4 { font-family: var(--display); font-size: 1.2rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; margin: 8px 0 6px; }
+.doc-card p { color: var(--muted); font-size: 0.88rem; line-height: 1.5; margin-bottom: 10px; }
+.doc-meta { color: var(--dim); font-size: 0.75rem; }
+
+.empty-state { padding: 60px 24px; text-align: center; color: var(--muted); background: var(--char); border: 1px dashed var(--line); border-radius: 4px; }
+.empty-state p { margin-bottom: 16px; }
+
 /* ── homepage upcoming-events widget ─────────────────── */
 .upcoming-list { display: flex; flex-direction: column; gap: 0; margin-bottom: 40px; }
 .upcoming-item { display: flex; align-items: flex-start; gap: 18px; padding: 18px 0; border-bottom: 1px solid var(--line); }
