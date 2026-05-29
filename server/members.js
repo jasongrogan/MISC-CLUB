@@ -50,16 +50,18 @@ function licenceStatus(daysLeft) {
 function classifyHandgunEntry(s) {
   const fc = String(s.firearm_class || '').toLowerCase();
   const sc = String(s.sub_class || '').toLowerCase();
-  if (fc.includes('air'))            return 'Air pistol';
-  if (fc.includes('rimfire'))        return 'Rimfire (.22)';
-  if (fc.includes('black powder'))   return 'Black powder';
-  if (fc === 'cf over .38' || fc.includes('over .38')) {
+  // ORDER MATTERS: Sight Picture combines "CF .38 or less / black powder" — check
+  // the combined label BEFORE the simpler 'black powder' substring so the combined
+  // SP class doesn't get mis-bucketed as pure black powder.
+  if (fc.includes('air'))                                       return 'Air pistol';
+  if (fc.includes('rimfire'))                                   return 'Rimfire (.22)';
+  if (fc.includes('.38 or less') || fc.startsWith('cf .38')) {
+    return fc.includes('black powder') ? 'Centrefire (≤.38) / BP' : 'Centrefire (≤.38)';
+  }
+  if (fc.includes('over .38') || fc === 'cf over .38') {
     return sc.includes('service') ? 'Centrefire (Service)' : 'Centrefire (>.38)';
   }
-  if (fc.includes('cf .38') || fc.includes('.38 or less')) {
-    if (fc.includes('black powder')) return 'Centrefire (≤.38) / BP';
-    return 'Centrefire (≤.38)';
-  }
+  if (fc.includes('black powder'))                              return 'Black powder';
   if (fc) return fc.replace(/^\w/, c => c.toUpperCase());
   return 'Other';
 }
