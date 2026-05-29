@@ -28,6 +28,106 @@ function fmtDate(iso) {
   return d.toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
 }
 
+/* ── Licence countdown: days remaining → status ──────────── */
+function daysUntil(isoDate) {
+  if (!isoDate) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(isoDate.length === 10 ? isoDate + 'T00:00:00' : isoDate);
+  return Math.floor((target - today) / 86400000);
+}
+function licenceStatus(daysLeft) {
+  if (daysLeft === null) return { tone: 'missing', label: 'NOT ON FILE', detail: 'Add to your profile' };
+  if (daysLeft < 0)      return { tone: 'red',     label: 'EXPIRED',     detail: `${Math.abs(daysLeft)} day${Math.abs(daysLeft)===1?'':'s'} overdue` };
+  if (daysLeft < 30)     return { tone: 'red',     label: 'RENEW NOW',   detail: `${daysLeft} day${daysLeft===1?'':'s'} remaining` };
+  if (daysLeft < 90)     return { tone: 'amber',   label: 'DUE SOON',    detail: `${daysLeft} days remaining` };
+  return                       { tone: 'green',   label: 'CURRENT',     detail: `${daysLeft} days remaining` };
+}
+
+/* ── LRD handgun-participation classifier ────────────────── */
+/* Maps a Sight Picture firearmClass / subClass entry to a VicPol-style
+   handgun class label. Inferred classes match what the lrd_compliance
+   tool returns: classes owned = classes shot.                          */
+function classifyHandgunEntry(s) {
+  const fc = String(s.firearm_class || '').toLowerCase();
+  const sc = String(s.sub_class || '').toLowerCase();
+  if (fc.includes('air'))            return 'Air pistol';
+  if (fc.includes('rimfire'))        return 'Rimfire (.22)';
+  if (fc.includes('black powder'))   return 'Black powder';
+  if (fc === 'cf over .38' || fc.includes('over .38')) {
+    return sc.includes('service') ? 'Centrefire (Service)' : 'Centrefire (>.38)';
+  }
+  if (fc.includes('cf .38') || fc.includes('.38 or less')) {
+    if (fc.includes('black powder')) return 'Centrefire (≤.38) / BP';
+    return 'Centrefire (≤.38)';
+  }
+  if (fc) return fc.replace(/^\w/, c => c.toUpperCase());
+  return 'Other';
+}
+
+/** Compute VicPol LRD compliance for the current calendar year. */
+function computeLrdCompliance(memberScores) {
+  const year     = new Date().getFullYear();
+  const yearStr  = String(year);
+  const inYear   = memberScores.filter(s => s.is_comp && (s.match_date || '').startsWith(yearStr));
+  // Per-class
+  const perClass = {};
+  for (const s of inYear) {
+    const cls = classifyHandgunEntry(s);
+    (perClass[cls] = perClass[cls] || { count: 0, best: null, sum: 0, days: new Set() }).count++;
+    if (s.score && (perClass[cls].best === null || s.score > perClass[cls].best)) perClass[cls].best = s.score;
+    perClass[cls].sum += (s.score || 0);
+    if (s.match_date) perClass[cls].days.add(s.match_date);
+  }
+  // Convert sets to counts for JSON-friendliness
+  Object.values(perClass).forEach(c => { c.distinctDays = c.days.size; delete c.days; });
+
+  const classesOwned   = Object.keys(perClass).length;
+  const totalEvents    = inYear.length;
+  const distinctDays   = new Set(inYear.map(s => s.match_date).filter(Boolean)).size;
+  const distinctMatches = new Set(inYear.map(s => `${s.match_date}#${s.match_name||''}`)).size;
+
+  // Required total events scales with classes owned (VicPol: 1-2→10, 3→12, 4+→16)
+  const requiredEvents = classesOwned <= 2 ? 10 : (classesOwned === 3 ? 12 : 16);
+  const PER_CLASS_REQ  = 4;
+  const DAYS_REQ       = 10;
+  const MATCH_REQ      = 6;
+
+  // Per-class status
+  const perClassStatus = Object.entries(perClass).map(([cls, c]) => ({
+    cls,
+    count: c.count,
+    best: c.best,
+    avg: c.count ? Math.round(c.sum / c.count) : null,
+    distinctDays: c.distinctDays,
+    required: PER_CLASS_REQ,
+    pct: Math.min(100, Math.round(c.count / PER_CLASS_REQ * 100)),
+    status: c.count >= PER_CLASS_REQ ? 'green' : (c.count >= 2 ? 'amber' : 'red'),
+  })).sort((a,b) => b.count - a.count);
+
+  const eventsStatus  = totalEvents     >= requiredEvents ? 'green' : (totalEvents     >= requiredEvents - 2 ? 'amber' : 'red');
+  const daysStatus    = distinctDays    >= DAYS_REQ       ? 'green' : (distinctDays    >= 7                 ? 'amber' : 'red');
+  const matchesStatus = distinctMatches >= MATCH_REQ      ? 'green' : (distinctMatches >= 4                 ? 'amber' : 'red');
+  const overall = (() => {
+    if (!classesOwned) return { tone: 'red', label: 'NO PARTICIPATION' };
+    const allGreen = eventsStatus==='green' && daysStatus==='green' && matchesStatus==='green' && perClassStatus.every(p => p.status==='green');
+    if (allGreen) return { tone: 'green', label: 'COMPLIANT' };
+    const anyRed = eventsStatus==='red' || daysStatus==='red' || matchesStatus==='red' || perClassStatus.some(p => p.status==='red');
+    if (anyRed) return { tone: 'red', label: 'NON-COMPLIANT' };
+    return { tone: 'amber', label: 'AT RISK' };
+  })();
+
+  return {
+    year, classesOwned, totalEvents, requiredEvents, distinctDays, distinctMatches,
+    perClassStatus,
+    checks: {
+      events:  { value: totalEvents,    required: requiredEvents, status: eventsStatus,  label: 'Total events' },
+      days:    { value: distinctDays,   required: DAYS_REQ,       status: daysStatus,    label: 'Distinct days' },
+      matches: { value: distinctMatches,required: MATCH_REQ,      status: matchesStatus, label: 'Distinct matches' },
+    },
+    overall,
+  };
+}
+
 /* ── shared HTML shell for member-portal pages ──────────── */
 function shell(title, body, opts = {}) {
   const m = opts.member;
@@ -36,7 +136,7 @@ function shell(title, body, opts = {}) {
 <title>${esc(title)} — MISC Members</title>
 <link rel="icon" href="/images/MISC-Colour-6x-1-300x294.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/styles.css?v=10"/></head>
+<link rel="stylesheet" href="/css/styles.css?v=11"/></head>
 <body class="members-page">
 <div class="topstrip">A private, members-only club &nbsp;·&nbsp; Port Melbourne, Victoria &nbsp;·&nbsp; Affiliated with <a href="https://www.vapa.org.au" target="_blank" rel="noopener">VAPA</a> &amp; <a href="https://www.trv.org.au" target="_blank" rel="noopener">TRV</a></div>
 <header class="topbar scrolled" id="topbar">
@@ -164,10 +264,12 @@ router.get('/', (req, res) => {
   const latest = db.prepare(`SELECT * FROM member_scores WHERE member_id = ? ORDER BY match_date DESC, id DESC LIMIT 1`).get(m.id);
   const best   = db.prepare(`SELECT MAX(score) AS s FROM member_scores WHERE member_id = ? AND is_comp = 1`).get(m.id);
   const docCount = db.prepare(`SELECT COUNT(*) AS n FROM documents WHERE is_members_only = 1`).get().n;
-  const expiring = [
-    m.pistol_licence_expiry && new Date(m.pistol_licence_expiry) < new Date(Date.now() + 60*86400000) ? 'Pistol' : null,
-    m.rifle_licence_expiry  && new Date(m.rifle_licence_expiry)  < new Date(Date.now() + 60*86400000) ? 'Long-arm' : null,
-  ].filter(Boolean);
+  const allScores = db.prepare(`SELECT * FROM member_scores WHERE member_id = ?`).all(m.id);
+  const lrd = computeLrdCompliance(allScores);
+  const pistolDays = daysUntil(m.pistol_licence_expiry);
+  const rifleDays  = daysUntil(m.rifle_licence_expiry);
+  const pistolStatus = licenceStatus(pistolDays);
+  const rifleStatus  = licenceStatus(rifleDays);
   const changedMsg = req.query.changed ? '<div class="flash-ok">Password updated.</div>' : '';
 
   res.send(shell('Dashboard', `
@@ -179,8 +281,72 @@ router.get('/', (req, res) => {
         <p class="members-hero-sub">Signed in as MISC #${esc(m.member_number)} · <a href="/members/profile" style="color:var(--gold)">View profile →</a></p>
       </div>
 
-      ${expiring.length ? `<div class="flash-warn">⚠ ${expiring.join(' & ')} licence expires within 60 days — update your <a href="/members/profile">profile</a>.</div>` : ''}
+      <!-- Licence countdown — green / amber / red status -->
+      <h3 class="members-section-h">Licence status</h3>
+      <div class="licence-grid">
+        <div class="licence-card licence-${pistolStatus.tone}">
+          <span class="licence-eyebrow">Pistol (handgun) licence</span>
+          <div class="licence-status-row">
+            <span class="status-pill status-${pistolStatus.tone}">● ${pistolStatus.label}</span>
+            ${pistolDays !== null ? `<strong class="licence-days">${pistolDays < 0 ? 'EXPIRED' : pistolDays}</strong>` : ''}
+            ${pistolDays !== null && pistolDays >= 0 ? `<span class="licence-days-unit">days</span>` : ''}
+          </div>
+          <p>${esc(pistolStatus.detail)}</p>
+          ${m.pistol_licence ? `<small>${esc(m.pistol_licence)}${m.pistol_licence_expiry?` · expires ${esc(fmtDate(m.pistol_licence_expiry))}`:''}</small>` : `<small><a href="/members/profile" style="color:var(--gold)">Add licence details →</a></small>`}
+        </div>
+        <div class="licence-card licence-${rifleStatus.tone}">
+          <span class="licence-eyebrow">Long-arm (rifle) licence</span>
+          <div class="licence-status-row">
+            <span class="status-pill status-${rifleStatus.tone}">● ${rifleStatus.label}</span>
+            ${rifleDays !== null ? `<strong class="licence-days">${rifleDays < 0 ? 'EXPIRED' : rifleDays}</strong>` : ''}
+            ${rifleDays !== null && rifleDays >= 0 ? `<span class="licence-days-unit">days</span>` : ''}
+          </div>
+          <p>${esc(rifleStatus.detail)}</p>
+          ${m.rifle_licence ? `<small>${esc(m.rifle_licence)}${m.rifle_licence_expiry?` · expires ${esc(fmtDate(m.rifle_licence_expiry))}`:''}</small>` : `<small><a href="/members/profile" style="color:var(--gold)">Add licence details →</a></small>`}
+        </div>
+      </div>
 
+      <!-- LRD handgun-participation compliance for the current year -->
+      <h3 class="members-section-h">LRD participation compliance · <span style="color:var(--muted);font-weight:400;letter-spacing:0.06em">Calendar ${lrd.year}</span></h3>
+      <div class="lrd-panel lrd-${lrd.overall.tone}">
+        <div class="lrd-header">
+          <div>
+            <span class="lrd-eyebrow">VicPol Handgun Target Shooting · Participation Conditions</span>
+            <h4>${lrd.overall.label}</h4>
+            <p class="lrd-sub">${lrd.classesOwned} class${lrd.classesOwned===1?'':'es'} shot this year · scale: <strong>${lrd.requiredEvents} events</strong> required (1–2 classes → 10 · 3 → 12 · 4+ → 16)</p>
+          </div>
+          <span class="status-pill status-${lrd.overall.tone} status-pill-lg">● ${lrd.overall.label}</span>
+        </div>
+
+        <div class="lrd-checks">
+          ${Object.entries(lrd.checks).map(([k,c]) => `
+            <div class="lrd-check lrd-check-${c.status}">
+              <span class="lrd-check-eyebrow">${esc(c.label)}</span>
+              <div class="lrd-check-num"><strong>${c.value}</strong><span>/${c.required}</span></div>
+              <div class="lrd-progress"><div class="lrd-progress-bar" style="width:${Math.min(100, Math.round(c.value/c.required*100))}%"></div></div>
+            </div>`).join('')}
+        </div>
+
+        ${lrd.perClassStatus.length ? `
+        <h5 class="lrd-section-h">Per-class participation <small>(≥ 4 events per class)</small></h5>
+        <table class="lrd-class-table">
+          <thead><tr><th>Class</th><th>Events</th><th>Days</th><th>Best</th><th>Avg</th><th>vs req</th><th>Status</th></tr></thead>
+          <tbody>
+            ${lrd.perClassStatus.map(p => `<tr>
+              <td>${esc(p.cls)}</td>
+              <td><strong>${p.count}</strong></td>
+              <td>${p.distinctDays}</td>
+              <td>${p.best ?? '—'}</td>
+              <td>${p.avg ?? '—'}</td>
+              <td><div class="lrd-progress lrd-progress-sm"><div class="lrd-progress-bar" style="width:${p.pct}%"></div></div></td>
+              <td><span class="status-pill status-${p.status}">● ${p.status==='green'?'OK':p.status==='amber'?'CLOSE':'SHORT'}</span></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        ` : `<p class="lrd-empty">No competition shoots recorded this calendar year yet. Hit the line — you'll need 4 entries per class to stay compliant.</p>`}
+      </div>
+
+      <h3 class="members-section-h">Quick links</h3>
       <div class="members-grid">
         <a class="members-tile" href="/members/profile">
           <span class="tile-eyebrow">Profile</span>

@@ -279,6 +279,67 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .tile-arrow { color: var(--gold); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
 
 .members-section-h { font-family: var(--display); font-size: 0.95rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+
+/* ── Status pills (green / amber / red / missing) ────────── */
+.status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 100px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; }
+.status-pill-lg { padding: 8px 16px; font-size: 0.82rem; letter-spacing: 0.14em; }
+.status-green   { background: rgba(72,187,120,.14); color: #74e29a; }
+.status-amber   { background: rgba(232,168,56,.14); color: #f0c674; }
+.status-red     { background: rgba(232,73,73,.16);  color: #ff8b95; }
+.status-missing { background: rgba(154,154,154,.14); color: var(--muted); }
+
+/* ── Licence countdown cards ─────────────────────────────── */
+.licence-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 32px; }
+@media (max-width: 700px) { .licence-grid { grid-template-columns: 1fr; } }
+.licence-card { padding: 22px 26px; background: var(--char); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 4px; }
+.licence-green   { border-left-color: #48bb78; }
+.licence-amber   { border-left-color: #e8a838; }
+.licence-red     { border-left-color: #e84949; }
+.licence-missing { border-left-color: var(--dim); }
+.licence-eyebrow { font-family: var(--display); font-size: 0.74rem; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+.licence-status-row { display: flex; align-items: baseline; gap: 14px; margin: 10px 0; flex-wrap: wrap; }
+.licence-days { font-family: var(--display); font-size: 2.4rem; font-weight: 900; color: var(--text); line-height: 1; }
+.licence-days-unit { font-size: 0.74rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+.licence-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 8px; }
+.licence-card small { color: var(--dim); font-size: 0.78rem; }
+.licence-card small a { color: var(--gold); }
+
+/* ── LRD compliance panel ────────────────────────────────── */
+.lrd-panel { background: var(--char); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 4px; padding: 26px 30px; margin-bottom: 32px; }
+.lrd-green { border-left-color: #48bb78; }
+.lrd-amber { border-left-color: #e8a838; }
+.lrd-red   { border-left-color: #e84949; }
+.lrd-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+.lrd-eyebrow { font-family: var(--display); font-size: 0.72rem; letter-spacing: 0.18em; color: var(--gold); text-transform: uppercase; font-weight: 700; }
+.lrd-header h4 { font-family: var(--display); font-size: 2rem; font-weight: 900; letter-spacing: -0.01em; text-transform: uppercase; line-height: 1; margin: 8px 0 6px; }
+.lrd-sub { color: var(--muted); font-size: 0.88rem; }
+.lrd-sub strong { color: var(--text); }
+
+.lrd-checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+@media (max-width: 700px) { .lrd-checks { grid-template-columns: 1fr; } }
+.lrd-check { padding: 18px 20px; background: var(--ink); border: 1px solid var(--line); border-radius: 3px; border-left: 3px solid var(--line); }
+.lrd-check-green { border-left-color: #48bb78; }
+.lrd-check-amber { border-left-color: #e8a838; }
+.lrd-check-red   { border-left-color: #e84949; }
+.lrd-check-eyebrow { font-family: var(--display); font-size: 0.68rem; letter-spacing: 0.16em; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+.lrd-check-num { font-family: var(--display); font-weight: 900; margin: 6px 0 10px; line-height: 1; display: flex; align-items: baseline; gap: 4px; }
+.lrd-check-num strong { font-size: 2rem; color: var(--text); }
+.lrd-check-num span { font-size: 1rem; color: var(--muted); }
+.lrd-progress { width: 100%; height: 6px; background: rgba(255,255,255,.05); border-radius: 100px; overflow: hidden; }
+.lrd-progress-sm { width: 90px; }
+.lrd-progress-bar { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-2)); transition: width .4s ease; }
+.lrd-check-green .lrd-progress-bar { background: linear-gradient(90deg, #48bb78, #74e29a); }
+.lrd-check-amber .lrd-progress-bar { background: linear-gradient(90deg, #e8a838, #f0c674); }
+.lrd-check-red .lrd-progress-bar   { background: linear-gradient(90deg, #e84949, #ff8b95); }
+
+.lrd-section-h { font-family: var(--display); font-size: 0.82rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 12px; }
+.lrd-section-h small { color: var(--dim); font-weight: 400; letter-spacing: 0.08em; text-transform: none; font-size: 0.78rem; }
+.lrd-class-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.lrd-class-table thead th { padding: 10px 14px; background: var(--ink); font-family: var(--display); font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); font-weight: 700; text-align: left; border-bottom: 1px solid var(--line); }
+.lrd-class-table tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.lrd-class-table tbody tr:last-child td { border-bottom: 0; }
+.lrd-class-table tbody td:nth-child(n+2):nth-child(-n+5) { text-align: right; font-variant-numeric: tabular-nums; }
+.lrd-empty { color: var(--muted); padding: 18px 0; font-size: 0.92rem; }
 .members-latest { display: flex; align-items: center; gap: 32px; padding: 28px 32px; background: var(--char); border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: 4px; margin-bottom: 16px; }
 .latest-score { font-family: var(--display); font-size: 3.4rem; font-weight: 900; color: var(--gold); line-height: 1; min-width: 100px; text-align: center; }
 .latest-body h4 { font-family: var(--display); font-size: 1.4rem; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 4px; }
